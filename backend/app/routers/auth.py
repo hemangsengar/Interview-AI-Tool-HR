@@ -41,33 +41,52 @@ async def migrate_database(db: Session = Depends(get_db)):
 @router.post("/signup", response_model=Token, status_code=status.HTTP_201_CREATED)
 async def signup(user_data: UserSignup, db: Session = Depends(get_db)):
     """Register a new HR user."""
-    print(f"[SIGNUP] Received data: name={user_data.name}, email={user_data.email}")
-    
-    # Check if user already exists
-    existing_user = db.query(User).filter(User.email == user_data.email).first()
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+    try:
+        print(f"[SIGNUP] Received data: name={user_data.name}, email={user_data.email}")
+        
+        # Check if user already exists
+        existing_user = db.query(User).filter(User.email == user_data.email).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+        
+        # Create new user
+        print(f"[SIGNUP] Hashing password...")
+        hashed_password = hash_password(user_data.password)
+        
+        print(f"[SIGNUP] Creating user object...")
+        new_user = User(
+            name=user_data.name,
+            email=user_data.email,
+            password_hash=hashed_password,
+            role="hr"  # Default role is HR
         )
-    
-    # Create new user
-    hashed_password = hash_password(user_data.password)
-    new_user = User(
-        name=user_data.name,
-        email=user_data.email,
-        password_hash=hashed_password,
-        role="hr"  # Default role is HR
-    )
-    
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    
-    # Create access token (sub must be string!)
-    access_token = create_access_token(data={"sub": str(new_user.id)})
-    
-    return Token(access_token=access_token)
+        
+        print(f"[SIGNUP] Adding to database...")
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        
+        print(f"[SIGNUP] User created with ID: {new_user.id}")
+        
+        # Create access token (sub must be string!)
+        access_token = create_access_token(data={"sub": str(new_user.id)})
+        
+        print(f"[SIGNUP] Token created successfully")
+        return Token(access_token=access_token)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[SIGNUP] ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Signup failed: {str(e)}"
+        )
 
 
 @router.post("/login", response_model=Token)
