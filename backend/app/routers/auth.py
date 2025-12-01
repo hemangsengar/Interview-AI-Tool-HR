@@ -16,6 +16,28 @@ async def test_signup(data: dict):
     return {"received": data}
 
 
+@router.get("/migrate-db")
+async def migrate_database(db: Session = Depends(get_db)):
+    """Migrate database - add role column if missing."""
+    from sqlalchemy import text
+    try:
+        # Try to add the role column
+        db.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'hr'"))
+        db.commit()
+        return {"status": "success", "message": "Role column added"}
+    except Exception as e:
+        error_msg = str(e).lower()
+        if "duplicate column" in error_msg or "already exists" in error_msg:
+            return {"status": "success", "message": "Role column already exists"}
+        else:
+            # Recreate all tables
+            from ..database import engine, Base
+            from .. import models
+            Base.metadata.drop_all(bind=engine)
+            Base.metadata.create_all(bind=engine)
+            return {"status": "success", "message": "Database recreated with new schema"}
+
+
 @router.post("/signup", response_model=Token, status_code=status.HTTP_201_CREATED)
 async def signup(user_data: UserSignup, db: Session = Depends(get_db)):
     """Register a new HR user."""
