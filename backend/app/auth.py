@@ -2,7 +2,8 @@
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import hashlib
+import secrets
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -10,27 +11,32 @@ from .config import settings
 from .database import get_db
 from .models import User
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 # HTTP Bearer token
 security = HTTPBearer()
 
 
 def hash_password(password: str) -> str:
-    """Hash a plain password."""
-    # Truncate password to 72 bytes for bcrypt compatibility
-    password_bytes = password.encode('utf-8')[:72]
-    password_truncated = password_bytes.decode('utf-8', errors='ignore')
-    return pwd_context.hash(password_truncated)
+    """Hash a plain password using SHA256 with salt."""
+    # Generate a random salt
+    salt = secrets.token_hex(16)
+    # Hash password with salt
+    pwd_hash = hashlib.sha256((password + salt).encode()).hexdigest()
+    # Return salt:hash format
+    return f"{salt}:{pwd_hash}"
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash."""
-    # Truncate password to 72 bytes for bcrypt compatibility
-    password_bytes = plain_password.encode('utf-8')[:72]
-    password_truncated = password_bytes.decode('utf-8', errors='ignore')
-    return pwd_context.verify(password_truncated, hashed_password)
+    try:
+        # Split salt and hash
+        salt, pwd_hash = hashed_password.split(':')
+        # Hash the plain password with the same salt
+        test_hash = hashlib.sha256((plain_password + salt).encode()).hexdigest()
+        # Compare hashes
+        return test_hash == pwd_hash
+    except Exception as e:
+        print(f"Password verification error: {e}")
+        return False
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
