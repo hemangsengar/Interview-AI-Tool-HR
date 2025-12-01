@@ -27,9 +27,9 @@ class CandidateStatusEnum(str, Enum):
 
 # Auth Schemas
 class UserSignup(BaseModel):
-    name: str = Field(..., min_length=1, max_length=255)
-    email: str = Field(..., pattern=r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
-    password: str = Field(..., min_length=6)
+    name: str
+    email: str
+    password: str
 
 
 class UserLogin(BaseModel):

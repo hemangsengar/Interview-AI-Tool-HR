@@ -9,6 +9,13 @@ from ..auth import hash_password, verify_password, create_access_token
 router = APIRouter()
 
 
+@router.post("/test-signup")
+async def test_signup(data: dict):
+    """Test endpoint to see what data is being received."""
+    print(f"[TEST SIGNUP] Raw data received: {data}")
+    return {"received": data}
+
+
 @router.post("/signup", response_model=Token, status_code=status.HTTP_201_CREATED)
 async def signup(user_data: UserSignup, db: Session = Depends(get_db)):
     """Register a new HR user."""
