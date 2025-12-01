@@ -12,6 +12,8 @@ router = APIRouter()
 @router.post("/signup", response_model=Token, status_code=status.HTTP_201_CREATED)
 async def signup(user_data: UserSignup, db: Session = Depends(get_db)):
     """Register a new HR user."""
+    print(f"[SIGNUP] Received data: name={user_data.name}, email={user_data.email}")
+    
     # Check if user already exists
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
