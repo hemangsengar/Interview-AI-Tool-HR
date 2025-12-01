@@ -29,6 +29,12 @@ class CandidateStatus(str, enum.Enum):
     REJECTED = "Rejected"
 
 
+class UserRole(str, Enum):
+    """User role enum."""
+    HR = "hr"
+    ADMIN = "admin"
+
+
 class User(Base):
     """HR user model."""
     __tablename__ = "users"
@@ -37,6 +43,7 @@ class User(Base):
     name = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
+    role = Column(String(20), nullable=False, default="hr")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
