@@ -25,6 +25,10 @@ app.add_middleware(
 # Create upload directory if it doesn't exist
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
+# Initialize database on startup
+from .database import init_db
+init_db()
+
 # Mount static files for audio
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
