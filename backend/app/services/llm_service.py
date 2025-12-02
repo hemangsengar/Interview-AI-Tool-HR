@@ -932,12 +932,13 @@ CRITICAL RULES FOR VOICE INTERVIEW:
 - DO NOT use HTML tags like <html>, <div>, <script>
 - DO NOT use special symbols or code syntax
 - Speak naturally as if talking to someone
+- MAXIMUM 400 CHARACTERS - Keep question concise and clear
 
 DO NOT ask about motivation, teamwork, or career goals.
 DO NOT ask about past projects (unless technical implementation details).
 ONLY ask technical/conceptual questions.
 
-Return ONLY the question text, no formatting."""
+Return ONLY the question text, no formatting. MUST be under 400 characters.
 
         elif question_type == "project":
             prompt = f"""You are interviewing about past projects. Generate ONE project-based question.
@@ -963,12 +964,13 @@ CRITICAL RULES FOR VOICE INTERVIEW:
 - Use FULL FORMS: "Artificial Intelligence" not "AI", "User Interface" not "UI"
 - DO NOT use HTML tags or special symbols
 - Speak naturally for voice conversation
+- MAXIMUM 400 CHARACTERS - Keep question concise
 
 DO NOT ask technical concept questions.
 DO NOT ask about motivation or career goals.
 ONLY ask about their actual project experience.
 
-Return ONLY the question text, no formatting."""
+Return ONLY the question text, no formatting. MUST be under 400 characters.
 
         elif question_type == "introduction":
             prompt = f"""Generate ONE introduction question for the interview.
@@ -986,8 +988,9 @@ CRITICAL RULES:
 - DO NOT use special symbols or formatting
 - Keep it conversational and friendly
 - Make it suitable for voice/speech
+- MAXIMUM 400 CHARACTERS - Keep it brief
 
-Return ONLY the question text, no formatting."""
+Return ONLY the question text, no formatting. MUST be under 400 characters.
 
         elif question_type in ["hr", "behavioral"]:
             prompt = f"""You are conducting behavioral/HR interview. Generate ONE behavioral question.
@@ -1009,12 +1012,13 @@ CRITICAL RULES:
 - Use FULL FORMS, not abbreviations (say "Artificial Intelligence" not "AI")
 - DO NOT use HTML tags or special symbols
 - Keep it conversational for voice interview
+- MAXIMUM 400 CHARACTERS - Keep it concise
 
 DO NOT ask technical questions.
 DO NOT ask about specific projects or technologies.
 ONLY ask about behavior, motivation, and soft skills.
 
-Return ONLY the question text, no formatting."""
+Return ONLY the question text, no formatting. MUST be under 400 characters.
 
         else:
             prompt = f"""Generate an interview question based on:
@@ -1027,7 +1031,13 @@ Return ONLY the question text."""
         try:
             response = self.model.generate_content(prompt)
             question = response.text.strip().strip('"').strip("'")
-            print(f"[QUESTION GEN] Generated: {question[:80]}...")
+            
+            # Enforce 400 character limit for TTS API (500 char limit with buffer)
+            if len(question) > 400:
+                print(f"[QUESTION GEN] Question too long ({len(question)} chars), truncating...")
+                question = question[:397] + "..."
+            
+            print(f"[QUESTION GEN] Generated ({len(question)} chars): {question[:80]}...")
             return question
         except Exception as e:
             print(f"[QUESTION GEN] Error: {e}, using fallback")

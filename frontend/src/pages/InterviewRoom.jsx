@@ -24,6 +24,8 @@ const InterviewRoom = () => {
   const [isVideoRecording, setIsVideoRecording] = useState(false)
   const [showInterviewerSelection, setShowInterviewerSelection] = useState(true)
   const [selectedInterviewer, setSelectedInterviewer] = useState(null) // 'aarush' or 'aarushi'
+  const [permissionsGranted, setPermissionsGranted] = useState(false)
+  const [permissionError, setPermissionError] = useState('')
   
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
@@ -51,10 +53,14 @@ const InterviewRoom = () => {
             facingMode: 'user'
           }
         })
+        console.log('✅ Media permissions granted!')
         console.log('Media stream obtained:', stream.id)
         console.log('Video tracks:', stream.getVideoTracks().length)
+        console.log('Audio tracks:', stream.getAudioTracks().length)
         
         setVideoStream(stream)
+        setPermissionsGranted(true)
+        setPermissionError('')
         
         // Set video stream immediately and after delay
         if (videoRef.current) {
@@ -77,7 +83,16 @@ const InterviewRoom = () => {
           }
         }, 500)
       } catch (err) {
-        console.error('Media error:', err)
+        console.error('❌ Media permission error:', err)
+        setPermissionsGranted(false)
+        
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          setPermissionError('Camera and microphone access denied. Please allow permissions to continue.')
+        } else if (err.name === 'NotFoundError') {
+          setPermissionError('No camera or microphone found. Please connect devices to continue.')
+        } else {
+          setPermissionError('Failed to access camera/microphone. Please check your device settings.')
+        }
         setError('Camera/Microphone access denied. Please enable them for an authentic interview experience.')
       }
     }
@@ -913,12 +928,37 @@ const InterviewRoom = () => {
               </div>
             </div>
             
+            {/* Permission Error Alert */}
+            {permissionError && (
+              <div className="mb-6 p-4 bg-red-100 border-2 border-red-400 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">⚠️</span>
+                  <div>
+                    <p className="font-bold text-red-800">Permission Required</p>
+                    <p className="text-red-700 text-sm">{permissionError}</p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
+                    >
+                      Retry Permissions
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {selectedInterviewer && (
               <button
                 onClick={startInterview}
-                className="px-10 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold hover:from-purple-700 hover:to-indigo-700 text-xl shadow-lg hover:shadow-xl transition-all"
+                disabled={!permissionsGranted}
+                className={`px-10 py-4 rounded-xl font-bold text-xl shadow-lg transition-all ${
+                  permissionsGranted
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 hover:shadow-xl cursor-pointer'
+                    : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                }`}
+                title={!permissionsGranted ? 'Please allow camera and microphone access first' : ''}
               >
-                Start Interview
+                {permissionsGranted ? 'Start Interview' : '🔒 Waiting for Permissions'}
               </button>
             )}
           </div>
