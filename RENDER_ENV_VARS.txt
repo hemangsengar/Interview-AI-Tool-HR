@@ -1,0 +1,49 @@
+╔════════════════════════════════════════════════════════════╗
+║       RENDER ENVIRONMENT VARIABLES - COPY & PASTE         ║
+╚════════════════════════════════════════════════════════════╝
+
+Go to: render.com/dashboard → Your Backend Service → Environment
+
+Add these 5 variables:
+
+┌────────────────────────────────────────────────────────────┐
+│ 1. DATABASE_URL                                            │
+└────────────────────────────────────────────────────────────┘
+postgresql://interview_user:z3WjOmLZhr6HVfnYwpQA4OlTpqvEIxrN@dpg-d4nc22buibrs739a1vs0-a/interview_db_cy4i
+
+┌────────────────────────────────────────────────────────────┐
+│ 2. GEMINI_API_KEY                                          │
+└────────────────────────────────────────────────────────────┘
+AIzaSyDI62P1Qv5uNy7Eb7La3KKnPCVtw0vScaw
+
+┌────────────────────────────────────────────────────────────┐
+│ 3. SARVAM_API_KEY                                          │
+└────────────────────────────────────────────────────────────┘
+sk_wnijjvf0_elEfAcD7M8EudN6d62dedozt
+
+┌────────────────────────────────────────────────────────────┐
+│ 4. SECRET_KEY                                              │
+└────────────────────────────────────────────────────────────┘
+bd4c26d481eedce16c4de2b0ddd54026c73d2882be5352d2ced85531fa821a24
+
+┌────────────────────────────────────────────────────────────┐
+│ 5. FRONTEND_URL                                            │
+└────────────────────────────────────────────────────────────┘
+https://your-app.vercel.app
+
+⚠️  IMPORTANT: Replace "your-app.vercel.app" with your actual URL!
+
+╔════════════════════════════════════════════════════════════╗
+║ AFTER ADDING VARIABLES:                                    ║
+║ 1. Click "Save Changes"                                    ║
+║ 2. Manual Deploy → Clear build cache & deploy              ║
+║ 3. Wait 2-3 minutes                                        ║
+║ 4. Check logs: "Database tables created successfully!"     ║
+╚════════════════════════════════════════════════════════════╝
+
+Then push to GitHub:
+  git add .
+  git commit -m "Add PostgreSQL and SECRET_KEY"
+  git push
+
+Vercel auto-deploys → Test your app!

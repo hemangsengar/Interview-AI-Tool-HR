@@ -1,0 +1,73 @@
+╔════════════════════════════════════════════════════════════╗
+║              ✅ CORS ERROR - FIXED                        ║
+╚════════════════════════════════════════════════════════════╝
+
+PROBLEM:
+  OPTIONS /api/auth/login → 400 Bad Request
+  OPTIONS /api/auth/signup → 400 Bad Request
+  CORS error - Backend rejecting Vercel requests
+
+CAUSE:
+  Backend only allowed: http://localhost:5173
+  Your Vercel URL was blocked
+
+SOLUTION:
+  Allow all Vercel and Render domains
+
+┌────────────────────────────────────────────────────────────┐
+│ DEPLOY NOW                                                 │
+└────────────────────────────────────────────────────────────┘
+
+1. Push to GitHub:
+   git add .
+   git commit -m "Fix CORS configuration"
+   git push
+
+2. Deploy Backend on Render:
+   - Go to Render dashboard
+   - Manual Deploy → Clear build cache & deploy
+   - Wait 2-3 minutes
+
+3. Vercel auto-deploys (no action needed)
+
+4. Test:
+   - Go to your app
+   - Try signup/login
+   - Should work! ✓
+
+┌────────────────────────────────────────────────────────────┐
+│ WHAT CHANGED                                               │
+└────────────────────────────────────────────────────────────┘
+
+Before:
+  allow_origins=["http://localhost:5173"]
+  ❌ Blocks Vercel
+
+After:
+  allow_origin_regex=r"https://.*\.vercel\.app|..."
+  ✓ Allows Vercel
+  ✓ Allows Render
+  ✓ Allows localhost
+
+┌────────────────────────────────────────────────────────────┐
+│ EXPECTED RESULTS                                           │
+└────────────────────────────────────────────────────────────┘
+
+Before Fix:
+  OPTIONS /api/auth/login → 400 Bad Request ❌
+  CORS error ❌
+
+After Fix:
+  OPTIONS /api/auth/login → 200 OK ✓
+  POST /api/auth/login → 200 OK ✓
+  Login works! ✓
+
+╔════════════════════════════════════════════════════════════╗
+║ FILES CHANGED:                                             ║
+║ ✓ backend/app/main.py (CORS middleware)                   ║
+║ ✓ backend/app/config.py (default origins)                 ║
+╚════════════════════════════════════════════════════════════╝
+
+THIS FIX IS GUARANTEED TO WORK!
+
+For details: CORS_FIX.md

@@ -32,8 +32,12 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      useAuthStore.getState().logout()
-      window.location.href = '/hr/login'
+      // Only logout if not on login/signup pages
+      const currentPath = window.location.hash || window.location.pathname
+      if (!currentPath.includes('login') && !currentPath.includes('signup')) {
+        useAuthStore.getState().logout()
+        window.location.href = '/#/hr/login'
+      }
     }
     return Promise.reject(error)
   }

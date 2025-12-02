@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from 'react-query'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { jobService } from '../api/services'
 import { useAuthStore } from '../store/authStore'
 
@@ -9,8 +9,7 @@ const HRDashboard = () => {
   const token = localStorage.getItem('token')
   
   if (!token) {
-    window.location.href = '/hr/login'
-    return null
+    return <Navigate to="/hr/login" replace />
   }
   
   const [showCreateJob, setShowCreateJob] = useState(false)
@@ -21,8 +20,13 @@ const HRDashboard = () => {
     good_to_have_skills: ''
   })
 
-  const { data: jobs, isLoading, refetch } = useQuery('jobs', () => 
-    jobService.list().then(res => res.data)
+  const { data: jobs, isLoading, refetch } = useQuery(
+    'jobs',
+    () => jobService.list().then(res => res.data),
+    {
+      enabled: !!token,  // Only run query if token exists
+      retry: 1
+    }
   )
 
   const handleCreateJob = async (e) => {

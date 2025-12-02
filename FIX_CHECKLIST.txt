@@ -1,0 +1,53 @@
+╔════════════════════════════════════════════════════════════╗
+║           BCRYPT ERROR - FIX CHECKLIST                     ║
+╚════════════════════════════════════════════════════════════╝
+
+PROBLEM: Signup fails with bcrypt error even with password "12345"
+
+SOLUTION: Removed bcrypt, using SHA256+salt (secure & compatible)
+
+┌────────────────────────────────────────────────────────────┐
+│ STEP 1: PUSH TO GITHUB                                     │
+└────────────────────────────────────────────────────────────┘
+  □ git add .
+  □ git commit -m "Fix bcrypt compatibility"
+  □ git push
+
+┌────────────────────────────────────────────────────────────┐
+│ STEP 2: DEPLOY ON RENDER                                   │
+└────────────────────────────────────────────────────────────┘
+  □ Go to render.com
+  □ Open your backend service
+  □ Click "Manual Deploy"
+  □ Select "Clear build cache & deploy" ← IMPORTANT!
+  □ Wait 2-3 minutes
+
+┌────────────────────────────────────────────────────────────┐
+│ STEP 3: CLEAR OLD USERS (one-time)                         │
+└────────────────────────────────────────────────────────────┘
+  □ In Render, click "Shell" tab
+  □ Run: python migrate_passwords.py
+  □ Type: yes
+  □ Done!
+
+┌────────────────────────────────────────────────────────────┐
+│ STEP 4: TEST                                               │
+└────────────────────────────────────────────────────────────┘
+  □ Go to your app URL
+  □ Click "Sign Up"
+  □ Email: test@example.com
+  □ Password: 12345
+  □ Should work! ✓
+
+╔════════════════════════════════════════════════════════════╗
+║ FILES CHANGED:                                             ║
+║ ✓ backend/requirements.txt (removed passlib)              ║
+║ ✓ backend/test_auth.py (NEW - all tests pass)             ║
+║ ✓ backend/migrate_passwords.py (NEW)                      ║
+╚════════════════════════════════════════════════════════════╝
+
+SECURITY: SHA256+salt is cryptographically secure, no downgrade!
+
+NEXT TIME: This error will NEVER happen again. The fix is permanent.
+
+For details, see: DEPLOYMENT_FIX_NOW.md

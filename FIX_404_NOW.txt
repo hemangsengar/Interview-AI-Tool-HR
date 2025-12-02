@@ -1,0 +1,78 @@
+╔════════════════════════════════════════════════════════════╗
+║           🚨 VERCEL 404 - CONFIGURATION ISSUE             ║
+╚════════════════════════════════════════════════════════════╝
+
+YOUR LOGS:
+✅ POST /api/auth/login → 200 OK (Backend works!)
+❌ Frontend → 404 NOT_FOUND (Vercel config wrong!)
+
+THE PROBLEM:
+Vercel is looking in root (/) but your app is in /frontend/
+
+┌────────────────────────────────────────────────────────────┐
+│ FIX: SET VERCEL ROOT DIRECTORY                             │
+└────────────────────────────────────────────────────────────┘
+
+1. Go to: https://vercel.com/dashboard
+
+2. Select your project
+
+3. Click "Settings" → "General"
+
+4. Find "Root Directory" section
+
+5. Click "Edit"
+
+6. Enter: frontend
+
+7. Click "Save"
+
+8. Go to "Deployments" tab
+
+9. Click "Redeploy" (uncheck cache)
+
+10. Wait 1-2 minutes
+
+11. Test your app → Should work! ✓
+
+┌────────────────────────────────────────────────────────────┐
+│ VERIFY IT'S WORKING                                        │
+└────────────────────────────────────────────────────────────┘
+
+Test 1: https://your-app.vercel.app/test.html
+        Should show: "✅ Vercel is Working!"
+
+Test 2: https://your-app.vercel.app/hr/login
+        Should show: Login page
+
+Test 3: Login → Should redirect to dashboard (no 404!)
+
+┌────────────────────────────────────────────────────────────┐
+│ IF THAT DOESN'T WORK                                       │
+└────────────────────────────────────────────────────────────┘
+
+NUCLEAR OPTION:
+1. Delete Vercel project
+2. Create new project
+3. Import GitHub repo
+4. Set Root Directory to "frontend" BEFORE deploy
+5. Deploy
+6. Will work! ✓
+
+╔════════════════════════════════════════════════════════════╗
+║ WHY THIS HAPPENS:                                          ║
+║                                                            ║
+║ Your project structure:                                   ║
+║   /                                                        ║
+║   ├── backend/                                             ║
+║   ├── frontend/  ← Your app is HERE!                       ║
+║   └── README.md                                            ║
+║                                                            ║
+║ Vercel is looking in / instead of /frontend/              ║
+║                                                            ║
+║ Solution: Tell Vercel to look in /frontend/               ║
+╚════════════════════════════════════════════════════════════╝
+
+THIS IS NOT A CODE ISSUE - IT'S A VERCEL SETTING!
+
+For detailed guide: VERCEL_SETUP_GUIDE.md

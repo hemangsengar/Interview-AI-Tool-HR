@@ -19,29 +19,17 @@ const HRLogin = () => {
       const response = await authService.login(formData)
       const token = response.data.access_token
       
-      console.log('🎉 Login successful!')
-      console.log('🔑 Token received:', token ? 'YES' : 'NO')
-      
       if (!token) {
         throw new Error('No token received')
       }
       
-      // Save token directly to localStorage FIRST
+      // Save token
       localStorage.setItem('token', token)
-      console.log('💾 Token saved to localStorage')
-      
-      // Verify it was saved
-      const savedToken = localStorage.getItem('token')
-      console.log('✅ Token verified in localStorage:', savedToken ? 'YES' : 'NO')
-      
-      // Then update state
       setAuth(token, null)
       
-      // Force full page reload to ensure token is loaded
-      console.log('🔄 Redirecting to dashboard...')
-      window.location.replace('/hr/jobs')
+      // Force hash navigation without reload
+      window.location.href = '/#/hr/jobs'
     } catch (err) {
-      console.error('❌ Login error:', err)
       setError(err.response?.data?.detail || 'Login failed')
       setLoading(false)
     }

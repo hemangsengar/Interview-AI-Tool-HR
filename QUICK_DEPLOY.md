@@ -28,8 +28,10 @@ git push -u origin main
    - `SARVAM_API_KEY`: your_key_here
    - `GEMINI_API_KEY`: your_key_here
    - `FRONTEND_URL`: https://your-app.vercel.app (update later)
+   - `SECRET_KEY`: (generate with `openssl rand -hex 32`)
 6. Click "Create Web Service"
-7. **Copy your backend URL**: `https://interview-backend-xxxx.onrender.com`
+7. **IMPORTANT**: Use "Clear build cache & deploy" for first deployment
+8. **Copy your backend URL**: `https://interview-backend-xxxx.onrender.com`
 
 ## Step 3: Deploy Frontend on Vercel (1 min)
 
@@ -62,6 +64,16 @@ After deployment, create your first HR account:
 2. Click "Sign Up"
 3. Create HR account
 4. Start creating jobs!
+
+## ⚠️ If You See BCrypt Errors
+
+If signup fails with bcrypt/password errors:
+1. Go to Render → Your service → "Manual Deploy"
+2. Select "Clear build cache & deploy"
+3. Wait for deployment to complete
+4. Try signup again
+
+See `BCRYPT_FIX_GUIDE.md` for details.
 
 ---
 

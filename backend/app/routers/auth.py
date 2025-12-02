@@ -92,16 +92,26 @@ async def signup(user_data: UserSignup, db: Session = Depends(get_db)):
 @router.post("/login", response_model=Token)
 async def login(credentials: UserLogin, db: Session = Depends(get_db)):
     """Login HR user."""
+    print(f"[LOGIN] Attempt for email: {credentials.email}")
+    
     # Find user
     user = db.query(User).filter(User.email == credentials.email).first()
     if not user:
+        print(f"[LOGIN] User not found: {credentials.email}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password"
         )
     
+    print(f"[LOGIN] User found: ID={user.id}, email={user.email}")
+    print(f"[LOGIN] Stored hash format: {user.password_hash[:20]}...")
+    
     # Verify password
-    if not verify_password(credentials.password, user.password_hash):
+    password_valid = verify_password(credentials.password, user.password_hash)
+    print(f"[LOGIN] Password verification result: {password_valid}")
+    
+    if not password_valid:
+        print(f"[LOGIN] Password verification failed for: {credentials.email}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password"
@@ -110,6 +120,7 @@ async def login(credentials: UserLogin, db: Session = Depends(get_db)):
     # Create access token (sub must be string!)
     access_token = create_access_token(data={"sub": str(user.id)})
     
+    print(f"[LOGIN] Login successful for: {credentials.email}")
     return Token(access_token=access_token)
 
 

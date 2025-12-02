@@ -1,0 +1,73 @@
+╔════════════════════════════════════════════════════════════╗
+║         ✅ POSTGRESQL SETUP - DEPLOY NOW                  ║
+╚════════════════════════════════════════════════════════════╝
+
+DATABASE CONFIGURED:
+✅ PostgreSQL URL added to backend/.env
+✅ psycopg2-binary in requirements.txt
+✅ Code already supports PostgreSQL
+
+┌────────────────────────────────────────────────────────────┐
+│ STEP 1: SET ENVIRONMENT VARIABLES ON RENDER                │
+└────────────────────────────────────────────────────────────┘
+
+1. Go to render.com/dashboard
+2. Select your BACKEND service
+3. Click "Environment"
+4. Add these variables:
+
+DATABASE_URL=postgresql://interview_user:z3WjOmLZhr6HVfnYwpQA4OlTpqvEIxrN@dpg-d4nc22buibrs739a1vs0-a/interview_db_cy4i
+
+GEMINI_API_KEY=AIzaSyDI62P1Qv5uNy7Eb7La3KKnPCVtw0vScaw
+
+SARVAM_API_KEY=sk_wnijjvf0_elEfAcD7M8EudN6d62dedozt
+
+SECRET_KEY=your-secret-key-change-this
+
+FRONTEND_URL=https://your-app.vercel.app
+
+5. Click "Save Changes"
+
+┌────────────────────────────────────────────────────────────┐
+│ STEP 2: DEPLOY BACKEND                                     │
+└────────────────────────────────────────────────────────────┘
+
+1. Still in Render
+2. Manual Deploy → Clear build cache & deploy
+3. Wait 2-3 minutes
+4. Check logs: "Database tables created successfully!"
+
+┌────────────────────────────────────────────────────────────┐
+│ STEP 3: PUSH TO GITHUB                                     │
+└────────────────────────────────────────────────────────────┘
+
+git add .
+git commit -m "Switch to PostgreSQL"
+git push
+
+Vercel auto-deploys (1-2 minutes)
+
+┌────────────────────────────────────────────────────────────┐
+│ STEP 4: TEST                                               │
+└────────────────────────────────────────────────────────────┘
+
+1. Go to your Vercel URL
+2. Hard refresh: Ctrl+Shift+R
+3. Sign up: test@example.com / password123
+4. Redirect to: /#/hr/jobs
+5. Dashboard loads ✓
+6. Create job ✓
+7. Logout and login ✓
+8. Everything works! ✓
+
+╔════════════════════════════════════════════════════════════╗
+║ BENEFITS:                                                  ║
+║ ✓ Data persists across deployments                        ║
+║ ✓ Free PostgreSQL on Render                               ║
+║ ✓ Production-ready database                               ║
+║ ✓ No code changes needed                                   ║
+╚════════════════════════════════════════════════════════════╝
+
+IMPORTANT: Replace "your-app.vercel.app" with your actual URL!
+
+For details: RENDER_POSTGRESQL_SETUP.md

@@ -19,12 +19,12 @@ const HRSignup = () => {
       const response = await authService.signup(formData)
       const token = response.data.access_token
       
-      // Save token directly to localStorage
+      // Save token
       localStorage.setItem('token', token)
       setAuth(token, null)
       
-      // Redirect
-      window.location.href = '/hr/jobs'
+      // Force hash navigation without reload
+      window.location.href = '/#/hr/jobs'
     } catch (err) {
       setError(err.response?.data?.detail || 'Signup failed')
       setLoading(false)
