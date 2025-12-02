@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     SARVAM_TTS_URL: str = "https://api.sarvam.ai/text-to-speech"
     
     # CORS
-    CORS_ORIGINS: str = "http://localhost:5173"
+    CORS_ORIGINS: str = "http://localhost:5173,https://*.vercel.app,https://*.onrender.com"
     FRONTEND_URL: str = "http://localhost:5173"
     
     # File Upload
@@ -40,10 +40,26 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> List[str]:
         """Parse CORS origins from comma-separated string."""
-        origins = [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
+        origins = []
+        for origin in self.CORS_ORIGINS.split(","):
+            origin = origin.strip()
+            if origin:
+                origins.append(origin)
+        
         # Add FRONTEND_URL if not already in list
         if self.FRONTEND_URL and self.FRONTEND_URL not in origins:
             origins.append(self.FRONTEND_URL)
+        
+        # Add common development and deployment origins
+        default_origins = [
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "http://127.0.0.1:5173",
+        ]
+        for default_origin in default_origins:
+            if default_origin not in origins:
+                origins.append(default_origin)
+        
         return origins
     
     class Config:
