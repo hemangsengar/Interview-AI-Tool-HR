@@ -203,19 +203,28 @@ class SpeechService:
                     return transcript
                 # If direct transcription failed, fall through to chunking
             
-            # If estimated over 30s, try direct transcription anyway
-            # (Frontend should limit recording to 28s, but handle gracefully if not)
-            print(f"Audio estimated over 30s, but trying direct transcription...")
-            print(f"Note: Frontend should auto-stop recording at 28 seconds")
+            # If estimated over 30s, we have a problem:
+            # 1. Sarvam API only accepts audio up to 30 seconds
+            # 2. Sarvam API expects WAV format, but we have WebM
+            # 3. We don't have ffmpeg to convert WebM to WAV
+            # 4. Splitting WebM by bytes breaks the format
             
+            print(f"⚠️ Audio estimated over 30s ({estimated_duration:.1f}s)")
+            print(f"⚠️ Sarvam API limit: 30 seconds")
+            print(f"⚠️ Audio format: likely WebM (cannot convert without ffmpeg)")
+            
+            # Try direct transcription anyway - maybe it will work
+            print(f"Attempting direct transcription despite length...")
             transcript = await self._transcribe_single_chunk(audio_bytes, language)
+            
             if transcript:
-                print(f"STT Success - Transcript: {transcript[:100]}...")
+                print(f"✓ Transcription succeeded despite length!")
+                print(f"Transcript: {transcript[:100]}...")
                 return transcript
             
-            # If transcription failed, return partial message
-            print("Transcription failed - audio too long or invalid format")
-            return "[Answer was too long to transcribe. Please keep responses under 30 seconds.]"
+            # If failed, return helpful message
+            print(f"✗ Transcription failed - audio too long")
+            return f"[Answer recorded ({estimated_duration:.0f}s) but exceeds 30-second transcription limit. Please keep responses concise - aim for 20-25 seconds for best results.]"
                 
         except Exception as e:
             print(f"Error in transcribe_audio: {e}")

@@ -28,6 +28,10 @@ const InterviewRoom = () => {
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
   const audioRef = useRef(new Audio())
+  const transcriptChunksRef = useRef([]) // Store transcripts from each chunk
+  const recordingStartTimeRef = useRef(null) // Track when recording started
+  const audioContextRef = useRef(null) // For WAV conversion
+  const mediaStreamRef = useRef(null) // Store media stream
   const videoRef = useRef(null) // For welcome screen preview
   const interviewVideoRef = useRef(null) // For interview screen
   const videoRecorderRef = useRef(null)
@@ -543,6 +547,98 @@ const InterviewRoom = () => {
     }, 5000) // Increased to 5 seconds to see alerts
   }
 
+  // Convert WebM audio to WAV format
+  const convertToWav = async (webmBlob) => {
+    try {
+      console.log('🔄 Converting WebM to WAV...')
+      
+      // Create audio context
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)()
+      
+      // Read webm as array buffer
+      const arrayBuffer = await webmBlob.arrayBuffer()
+      
+      // Decode audio data
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+      
+      // Convert to WAV
+      const wavBuffer = audioBufferToWav(audioBuffer)
+      const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' })
+      
+      console.log('✅ Converted to WAV:', wavBlob.size, 'bytes')
+      return wavBlob
+    } catch (err) {
+      console.error('❌ WAV conversion failed:', err)
+      return webmBlob // Return original if conversion fails
+    }
+  }
+
+  // Helper: Convert AudioBuffer to WAV format
+  const audioBufferToWav = (audioBuffer) => {
+    const numChannels = audioBuffer.numberOfChannels
+    const sampleRate = audioBuffer.sampleRate
+    const format = 1 // PCM
+    const bitDepth = 16
+    
+    const bytesPerSample = bitDepth / 8
+    const blockAlign = numChannels * bytesPerSample
+    
+    const data = []
+    for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
+      data.push(audioBuffer.getChannelData(i))
+    }
+    
+    const interleaved = interleave(data)
+    const dataLength = interleaved.length * bytesPerSample
+    const buffer = new ArrayBuffer(44 + dataLength)
+    const view = new DataView(buffer)
+    
+    // WAV header
+    writeString(view, 0, 'RIFF')
+    view.setUint32(4, 36 + dataLength, true)
+    writeString(view, 8, 'WAVE')
+    writeString(view, 12, 'fmt ')
+    view.setUint32(16, 16, true)
+    view.setUint16(20, format, true)
+    view.setUint16(22, numChannels, true)
+    view.setUint32(24, sampleRate, true)
+    view.setUint32(28, sampleRate * blockAlign, true)
+    view.setUint16(32, blockAlign, true)
+    view.setUint16(34, bitDepth, true)
+    writeString(view, 36, 'data')
+    view.setUint32(40, dataLength, true)
+    
+    // Write audio data
+    floatTo16BitPCM(view, 44, interleaved)
+    
+    return buffer
+  }
+
+  const interleave = (channelData) => {
+    const length = channelData[0].length
+    const result = new Float32Array(length * channelData.length)
+    let offset = 0
+    for (let i = 0; i < length; i++) {
+      for (let channel = 0; channel < channelData.length; channel++) {
+        result[offset++] = channelData[channel][i]
+      }
+    }
+    return result
+  }
+
+  const writeString = (view, offset, string) => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i))
+    }
+  }
+
+  const floatTo16BitPCM = (view, offset, input) => {
+    for (let i = 0; i < input.length; i++, offset += 2) {
+      const s = Math.max(-1, Math.min(1, input[i]))
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true)
+    }
+  }
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -554,33 +650,52 @@ const InterviewRoom = () => {
       }
       
       console.log('🎤 Recording with:', mimeType)
+      console.log('🎤 Using streaming buffer approach - will auto-chunk every 25 seconds')
       
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType })
       audioChunksRef.current = []
+      transcriptChunksRef.current = []
+      recordingStartTimeRef.current = Date.now()
       
       mediaRecorderRef.current.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data)
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+          const chunkNumber = audioChunksRef.current.length
+          const elapsedTime = ((Date.now() - recordingStartTimeRef.current) / 1000).toFixed(1)
+          console.log(`🎤 Chunk ${chunkNumber} collected: ${event.data.size} bytes (${elapsedTime}s elapsed)`)
+        }
       }
       
       mediaRecorderRef.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType })
-        console.log('🎤 Recorded:', audioBlob.size, 'bytes')
-        await submitAnswer(audioBlob)
+        const totalTime = ((Date.now() - recordingStartTimeRef.current) / 1000).toFixed(1)
+        console.log(`🎤 Recording stopped after ${totalTime}s`)
+        console.log(`📊 Total chunks: ${audioChunksRef.current.length}`)
+        
+        // Combine all WebM chunks
+        const webmBlob = new Blob(audioChunksRef.current, { type: mimeType })
+        console.log(`🎤 WebM audio: ${webmBlob.size} bytes`)
+        
+        // Convert to WAV for proper chunking
+        const wavBlob = await convertToWav(webmBlob)
+        console.log(`🎤 WAV audio: ${wavBlob.size} bytes`)
+        
+        await submitAnswer(wavBlob)
         stream.getTracks().forEach(track => track.stop())
       }
       
-      mediaRecorderRef.current.start()
+      // Start recording with 25-second chunks
+      // This will trigger ondataavailable every 25 seconds
+      mediaRecorderRef.current.start(25000)
       setIsRecording(true)
       setAvatarState('listening')
-      setStatus('Recording your answer... (Keep it under 30 seconds)')
+      setStatus('Recording... (Keep it concise - aim for 20-25 seconds)')
       
-      // Auto-stop after 28 seconds to stay under 30s limit
+      // Show warning after 25 seconds
       setTimeout(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-          console.log('⏱️ Auto-stopping recording at 28 seconds')
-          stopRecording()
+          setStatus('Recording... (⚠️ Over 25s - consider wrapping up)')
         }
-      }, 28000)
+      }, 25000)
     } catch (err) {
       setError('Failed to start recording. Please check microphone permissions.')
     }
@@ -614,6 +729,8 @@ const InterviewRoom = () => {
       setStatus('Error - Please try again')
     }
   }
+
+
 
   const handleCodeSubmit = async (code) => {
     try {
