@@ -551,25 +551,46 @@ const InterviewRoom = () => {
   const convertToWav = async (webmBlob) => {
     try {
       console.log('🔄 Converting WebM to WAV...')
+      console.log('Input blob size:', webmBlob.size, 'bytes')
+      console.log('Input blob type:', webmBlob.type)
       
       // Create audio context
       const audioContext = new (window.AudioContext || window.webkitAudioContext)()
+      console.log('Audio context created, sample rate:', audioContext.sampleRate)
       
       // Read webm as array buffer
       const arrayBuffer = await webmBlob.arrayBuffer()
+      console.log('Array buffer size:', arrayBuffer.byteLength, 'bytes')
       
       // Decode audio data
+      console.log('Decoding audio data...')
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+      console.log('Audio decoded successfully!')
+      console.log('Duration:', audioBuffer.duration, 'seconds')
+      console.log('Channels:', audioBuffer.numberOfChannels)
+      console.log('Sample rate:', audioBuffer.sampleRate)
       
       // Convert to WAV
+      console.log('Converting to WAV format...')
       const wavBuffer = audioBufferToWav(audioBuffer)
       const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' })
       
       console.log('✅ Converted to WAV:', wavBlob.size, 'bytes')
+      console.log('WAV blob type:', wavBlob.type)
+      
+      // Verify WAV header
+      const headerCheck = new Uint8Array(wavBuffer.slice(0, 12))
+      const riff = String.fromCharCode(...headerCheck.slice(0, 4))
+      const wave = String.fromCharCode(...headerCheck.slice(8, 12))
+      console.log('WAV header check - RIFF:', riff, 'WAVE:', wave)
+      
       return wavBlob
     } catch (err) {
       console.error('❌ WAV conversion failed:', err)
-      return webmBlob // Return original if conversion fails
+      console.error('Error name:', err.name)
+      console.error('Error message:', err.message)
+      console.error('Stack:', err.stack)
+      throw err // Don't return original, throw error so we know it failed
     }
   }
 
@@ -665,15 +686,24 @@ const InterviewRoom = () => {
         
         // Create blob from chunks
         const webmBlob = new Blob(audioChunksRef.current, { type: mimeType })
-        console.log(`📦 Audio blob: ${webmBlob.size} bytes`)
+        console.log(`📦 WebM blob: ${webmBlob.size} bytes, type: ${webmBlob.type}`)
         
-        // Convert to WAV
-        const wavBlob = await convertToWav(webmBlob)
-        console.log(`📦 WAV blob: ${wavBlob.size} bytes`)
-        
-        // Send to backend - backend will handle chunking automatically
-        await submitAnswer(wavBlob)
-        stream.getTracks().forEach(track => track.stop())
+        try {
+          // Convert to WAV
+          console.log('Starting WAV conversion...')
+          const wavBlob = await convertToWav(webmBlob)
+          console.log(`✅ WAV conversion successful: ${wavBlob.size} bytes`)
+          
+          // Send to backend - backend will handle chunking automatically
+          await submitAnswer(wavBlob)
+        } catch (err) {
+          console.error('❌ Failed to convert or submit audio:', err)
+          setError('Failed to process audio. Please try again.')
+          setAvatarState('idle')
+          setStatus('Error processing audio')
+        } finally {
+          stream.getTracks().forEach(track => track.stop())
+        }
       }
       
       mediaRecorderRef.current.start()
