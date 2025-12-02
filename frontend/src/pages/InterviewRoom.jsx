@@ -569,11 +569,18 @@ const InterviewRoom = () => {
         stream.getTracks().forEach(track => track.stop())
       }
       
-      // Record in 10-second chunks to keep files smaller
-      mediaRecorderRef.current.start(10000)
+      mediaRecorderRef.current.start()
       setIsRecording(true)
       setAvatarState('listening')
-      setStatus('Recording your answer...')
+      setStatus('Recording your answer... (Keep it under 30 seconds)')
+      
+      // Auto-stop after 28 seconds to stay under 30s limit
+      setTimeout(() => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          console.log('⏱️ Auto-stopping recording at 28 seconds')
+          stopRecording()
+        }
+      }, 28000)
     } catch (err) {
       setError('Failed to start recording. Please check microphone permissions.')
     }
