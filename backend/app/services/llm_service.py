@@ -938,7 +938,7 @@ DO NOT ask about motivation, teamwork, or career goals.
 DO NOT ask about past projects (unless technical implementation details).
 ONLY ask technical/conceptual questions.
 
-Return ONLY the question text, no formatting. MUST be under 400 characters.
+Return ONLY the question text, no formatting. MUST be under 400 characters."""
 
         elif question_type == "project":
             prompt = f"""You are interviewing about past projects. Generate ONE project-based question.
@@ -970,7 +970,7 @@ DO NOT ask technical concept questions.
 DO NOT ask about motivation or career goals.
 ONLY ask about their actual project experience.
 
-Return ONLY the question text, no formatting. MUST be under 400 characters.
+Return ONLY the question text, no formatting. MUST be under 400 characters."""
 
         elif question_type == "introduction":
             prompt = f"""Generate ONE introduction question for the interview.
