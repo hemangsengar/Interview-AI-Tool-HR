@@ -547,7 +547,15 @@ const InterviewRoom = () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       
-      mediaRecorderRef.current = new MediaRecorder(stream)
+      // Use webm format (browser native)
+      let mimeType = 'audio/webm'
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        mimeType = 'audio/webm;codecs=opus'
+      }
+      
+      console.log('🎤 Recording with:', mimeType)
+      
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType })
       audioChunksRef.current = []
       
       mediaRecorderRef.current.ondataavailable = (event) => {
@@ -555,12 +563,14 @@ const InterviewRoom = () => {
       }
       
       mediaRecorderRef.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' })
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType })
+        console.log('🎤 Recorded:', audioBlob.size, 'bytes')
         await submitAnswer(audioBlob)
         stream.getTracks().forEach(track => track.stop())
       }
       
-      mediaRecorderRef.current.start()
+      // Record in 10-second chunks to keep files smaller
+      mediaRecorderRef.current.start(10000)
       setIsRecording(true)
       setAvatarState('listening')
       setStatus('Recording your answer...')

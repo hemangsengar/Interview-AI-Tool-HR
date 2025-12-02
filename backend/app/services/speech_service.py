@@ -189,15 +189,22 @@ class SpeechService:
                     print("Failed to transcribe any chunks")
                     return None
             
-            # If duration is unknown, try direct transcription anyway
-            print(f"Duration unknown, attempting direct transcription...")
-            transcript = await self._transcribe_single_chunk(audio_bytes, language)
-            if transcript:
-                print(f"STT Success - Transcript: {transcript[:100]}...")
-                return transcript
+            # If duration is unknown, estimate from file size
+            # Rough estimate: webm opus is ~16KB/second
+            estimated_duration = len(audio_bytes) / (16 * 1024)
+            print(f"Duration unknown, estimating from size: ~{estimated_duration:.1f}s ({len(audio_bytes)} bytes)")
             
-            print("Direct transcription failed, audio might be too long or invalid format")
-            return None
+            # If estimated duration is under 30s, try direct transcription
+            if estimated_duration <= 30.0:
+                print(f"Estimated under 30s, attempting direct transcription...")
+                transcript = await self._transcribe_single_chunk(audio_bytes, language)
+                if transcript:
+                    print(f"STT Success - Transcript: {transcript[:100]}...")
+                    return transcript
+            
+            # If estimated over 30s or direct transcription failed, return error message
+            print(f"Audio likely over 30s (estimated {estimated_duration:.1f}s). Please keep answers under 30 seconds.")
+            return "[Answer too long - please keep responses under 30 seconds]"
                 
         except Exception as e:
             print(f"Error in transcribe_audio: {e}")
