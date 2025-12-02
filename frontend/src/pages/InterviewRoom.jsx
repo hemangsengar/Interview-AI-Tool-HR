@@ -441,24 +441,43 @@ const InterviewRoom = () => {
       
       // Play audio from backend (Sarvam TTS)
       if (question.audio_url) {
+        console.log('🔊 Playing audio:', question.audio_url)
         setAvatarState('speaking')
         setStatus('Speaking...')
         
-        const audio = new Audio(question.audio_url)
-        audio.play().catch(e => console.log('Audio play error:', e))
+        const fullUrl = question.audio_url.startsWith('http') 
+          ? question.audio_url 
+          : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}${question.audio_url}`
+        
+        console.log('🔊 Full audio URL:', fullUrl)
+        
+        const audio = new Audio(fullUrl)
+        
+        audio.onloadeddata = () => {
+          console.log('✅ Audio loaded successfully')
+        }
+        
+        audio.play()
+          .then(() => console.log('✅ Audio playing'))
+          .catch(e => {
+            console.error('❌ Audio play error:', e)
+            setAvatarState('idle')
+            setStatus('Your turn to answer')
+          })
         
         audio.onended = () => {
+          console.log('✅ Audio ended')
           setAvatarState('idle')
           setStatus('Your turn to answer')
         }
         
-        audio.onerror = () => {
-          console.log('Audio error, falling back to text')
+        audio.onerror = (e) => {
+          console.error('❌ Audio error:', e)
           setAvatarState('idle')
           setStatus('Your turn to answer')
         }
       } else {
-        // No audio available
+        console.log('⚠️ No audio URL provided')
         setAvatarState('idle')
         setStatus('Your turn to answer')
       }
