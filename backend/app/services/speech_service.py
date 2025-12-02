@@ -149,17 +149,24 @@ class SpeechService:
         Automatically handles audio longer than 30 seconds by splitting into chunks.
         """
         try:
-            # First, try to get duration - if it fails, convert to WAV
+            # QUICK FIX: Skip conversion, just try to transcribe directly
+            print(f"Attempting direct transcription (skipping ffmpeg)...")
+            transcript = await self._transcribe_single_chunk(audio_bytes, language)
+            if transcript:
+                print(f"STT Success - Transcript: {transcript[:100]}...")
+                return transcript
+            
+            # If direct transcription fails, try to get duration
             duration = self._get_audio_duration(audio_bytes)
             
             if duration == 0.0:
-                print("Audio is not WAV format, converting...")
-                wav_bytes = self._convert_to_wav(audio_bytes)
-                if not wav_bytes:
-                    print("Failed to convert audio to WAV")
-                    return None
-                audio_bytes = wav_bytes
-                duration = self._get_audio_duration(audio_bytes)
+                print("Audio format not recognized, but will try transcription anyway")
+                # Try transcription without conversion
+                transcript = await self._transcribe_single_chunk(audio_bytes, language)
+                if transcript:
+                    print(f"STT Success (no conversion) - Transcript: {transcript[:100]}...")
+                    return transcript
+                return None
             
             print(f"Audio duration: {duration:.2f} seconds")
             
