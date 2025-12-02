@@ -653,21 +653,22 @@ const InterviewRoom = () => {
       console.log('🎤 Using 25-second auto-chunking to handle Sarvam 30s limit')
       
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType })
-      audioChunksRef.current = [] // Buffer for current segment
+      audioChunksRef.current = [] // Not used in chunking mode
       transcriptChunksRef.current = [] // Accumulated transcripts
       recordingStartTimeRef.current = Date.now()
+      let chunkStartTime = Date.now()
       
       // This fires every 25 seconds OR when stop() is called
       mediaRecorderRef.current.ondataavailable = async (event) => {
         if (event.data.size > 0) {
-          const elapsedTime = ((Date.now() - recordingStartTimeRef.current) / 1000).toFixed(1)
-          console.log(`🎤 Chunk received: ${event.data.size} bytes (${elapsedTime}s elapsed)`)
+          const chunkDuration = ((Date.now() - chunkStartTime) / 1000).toFixed(1)
+          console.log(`🎤 Chunk received: ${event.data.size} bytes (${chunkDuration}s duration)`)
           
           // Convert this chunk to WAV
           const webmBlob = new Blob([event.data], { type: mimeType })
           const wavBlob = await convertToWav(webmBlob)
           
-          console.log(`📤 Sending ${elapsedTime}s segment to STT (${wavBlob.size} bytes)`)
+          console.log(`📤 Sending ${chunkDuration}s segment to STT (${wavBlob.size} bytes)`)
           
           // Send this chunk to backend for transcription
           try {
@@ -680,28 +681,41 @@ const InterviewRoom = () => {
             console.log(`✅ Chunk transcribed: "${transcriptText}"`)
             
             // Add to accumulated transcript
-            transcriptChunksRef.current.push(transcriptText)
-            
-            // Update subtitle with accumulated text
-            const fullTranscript = transcriptChunksRef.current.join(' ')
-            setSubtitle(`You: ${fullTranscript}`)
+            if (transcriptText.trim()) {
+              transcriptChunksRef.current.push(transcriptText)
+              
+              // Update subtitle with accumulated text
+              const fullTranscript = transcriptChunksRef.current.join(' ')
+              setSubtitle(`You: ${fullTranscript}`)
+            }
             
           } catch (err) {
             console.error('❌ Chunk transcription failed:', err)
+            console.error('Error details:', err.response?.data)
           }
           
-          // Reset recording start time for next chunk
-          recordingStartTimeRef.current = Date.now()
+          // Reset chunk start time for next chunk
+          chunkStartTime = Date.now()
         }
       }
       
       mediaRecorderRef.current.onstop = async () => {
-        console.log(`🎤 Recording stopped`)
+        const totalTime = ((Date.now() - recordingStartTimeRef.current) / 1000).toFixed(1)
+        console.log(`🎤 Recording stopped after ${totalTime}s`)
         console.log(`📊 Total transcript chunks: ${transcriptChunksRef.current.length}`)
         
         // Combine all transcripts
         const fullTranscript = transcriptChunksRef.current.join(' ').trim()
         console.log(`📝 Full transcript: "${fullTranscript}"`)
+        
+        if (!fullTranscript) {
+          console.warn('⚠️ No transcript available')
+          setError('No speech detected. Please try again.')
+          setAvatarState('idle')
+          setStatus('Ready to record')
+          stream.getTracks().forEach(track => track.stop())
+          return
+        }
         
         // Submit the full transcript as text
         await submitTranscript(fullTranscript)
