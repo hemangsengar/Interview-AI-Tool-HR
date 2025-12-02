@@ -152,82 +152,60 @@ class SpeechService:
             # Try to get duration first
             duration = self._get_audio_duration(audio_bytes)
             
-            print(f"Audio duration: {duration:.2f} seconds" if duration > 0 else "Audio duration: unknown")
+            if duration > 0:
+                print(f"✅ Audio duration: {duration:.2f} seconds (WAV format detected)")
+            else:
+                print(f"⚠️ Audio duration: unknown (not a valid WAV file)")
             
             # If duration is known and under 30 seconds, transcribe directly
             if duration > 0 and duration <= 30.0:
-                print(f"Audio under 30s, transcribing directly...")
+                print(f"✅ Audio under 30s, transcribing directly...")
                 transcript = await self._transcribe_single_chunk(audio_bytes, language)
                 if transcript:
-                    print(f"STT Success - Transcript: {transcript[:100]}...")
+                    print(f"✅ STT Success - Transcript: {transcript[:100]}...")
                     return transcript
+                else:
+                    print(f"❌ Transcription failed")
+                    return None
             
             # If duration is known and over 30 seconds, split into chunks
             if duration > 30.0:
-                print(f"Audio exceeds 30s limit ({duration:.2f}s), splitting into chunks...")
+                print(f"⚠️ Audio exceeds 30s limit ({duration:.2f}s)")
+                print(f"🔄 Splitting into 25-second chunks...")
                 chunks = self._split_audio_chunks(audio_bytes, chunk_duration=25.0)
-                print(f"Split into {len(chunks)} chunks")
+                print(f"✅ Split into {len(chunks)} chunks")
                 
                 # Transcribe each chunk
                 transcripts = []
                 for i, chunk in enumerate(chunks):
                     chunk_duration = self._get_audio_duration(chunk)
-                    print(f"Transcribing chunk {i+1}/{len(chunks)} ({chunk_duration:.2f}s)...")
+                    print(f"📤 Transcribing chunk {i+1}/{len(chunks)} ({chunk_duration:.2f}s)...")
                     
                     transcript = await self._transcribe_single_chunk(chunk, language)
                     if transcript:
                         transcripts.append(transcript)
+                        print(f"✅ Chunk {i+1} transcribed: {transcript[:50]}...")
                     else:
-                        print(f"Warning: Failed to transcribe chunk {i+1}")
+                        print(f"❌ Failed to transcribe chunk {i+1}")
                 
                 # Combine all transcripts
                 if transcripts:
                     full_transcript = " ".join(transcripts)
-                    print(f"STT Success - Combined transcript: {full_transcript[:100]}...")
+                    print(f"✅ STT Success - Combined transcript ({len(transcripts)} chunks)")
+                    print(f"Full transcript: {full_transcript[:200]}...")
                     return full_transcript
                 else:
-                    print("Failed to transcribe any chunks")
+                    print("❌ Failed to transcribe any chunks")
                     return None
             
-            # If duration is unknown, estimate from file size and split if needed
-            # Rough estimate: webm opus is ~16KB/second
-            estimated_duration = len(audio_bytes) / (16 * 1024)
-            print(f"Duration unknown, estimating from size: ~{estimated_duration:.1f}s ({len(audio_bytes)} bytes)")
-            
-            # If estimated duration is under 30s, try direct transcription
-            if estimated_duration <= 30.0:
-                print(f"Estimated under 30s, attempting direct transcription...")
-                transcript = await self._transcribe_single_chunk(audio_bytes, language)
-                if transcript:
-                    print(f"STT Success - Transcript: {transcript[:100]}...")
-                    return transcript
-                # If direct transcription failed, fall through to chunking
-            
-            # If estimated over 30s, we have a problem:
-            # 1. Sarvam API only accepts audio up to 30 seconds
-            # 2. Sarvam API expects WAV format, but we have WebM
-            # 3. We don't have ffmpeg to convert WebM to WAV
-            # 4. Splitting WebM by bytes breaks the format
-            
-            print(f"⚠️ Audio estimated over 30s ({estimated_duration:.1f}s)")
-            print(f"⚠️ Sarvam API limit: 30 seconds")
-            print(f"⚠️ Audio format: likely WebM (cannot convert without ffmpeg)")
-            
-            # Try direct transcription anyway - maybe it will work
-            print(f"Attempting direct transcription despite length...")
-            transcript = await self._transcribe_single_chunk(audio_bytes, language)
-            
-            if transcript:
-                print(f"✓ Transcription succeeded despite length!")
-                print(f"Transcript: {transcript[:100]}...")
-                return transcript
-            
-            # If failed, return helpful message
-            print(f"✗ Transcription failed - audio too long")
-            return f"[Answer recorded ({estimated_duration:.0f}s) but exceeds 30-second transcription limit. Please keep responses concise - aim for 20-25 seconds for best results.]"
+            # If we reach here, duration is unknown (not a valid WAV)
+            print(f"❌ Cannot process audio: Invalid WAV format")
+            print(f"Audio size: {len(audio_bytes)} bytes")
+            print(f"Expected: WAV file with RIFF header")
+            return None
                 
         except Exception as e:
-            print(f"Error in transcribe_audio: {e}")
+            print(f"❌ Error in transcribe_audio: {e}")
             import traceback
             traceback.print_exc()
             return None

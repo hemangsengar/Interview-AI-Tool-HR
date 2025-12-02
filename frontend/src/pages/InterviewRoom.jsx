@@ -650,84 +650,36 @@ const InterviewRoom = () => {
       }
       
       console.log('🎤 Recording with:', mimeType)
-      console.log('🎤 Using 25-second auto-chunking to handle Sarvam 30s limit')
       
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType })
-      audioChunksRef.current = [] // Not used in chunking mode
-      transcriptChunksRef.current = [] // Accumulated transcripts
-      recordingStartTimeRef.current = Date.now()
-      let chunkStartTime = Date.now()
+      audioChunksRef.current = []
       
-      // This fires every 25 seconds OR when stop() is called
-      mediaRecorderRef.current.ondataavailable = async (event) => {
+      mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          const chunkDuration = ((Date.now() - chunkStartTime) / 1000).toFixed(1)
-          console.log(`🎤 Chunk received: ${event.data.size} bytes (${chunkDuration}s duration)`)
-          
-          // Convert this chunk to WAV
-          const webmBlob = new Blob([event.data], { type: mimeType })
-          const wavBlob = await convertToWav(webmBlob)
-          
-          console.log(`📤 Sending ${chunkDuration}s segment to STT (${wavBlob.size} bytes)`)
-          
-          // Send this chunk to backend for transcription
-          try {
-            const formData = new FormData()
-            formData.append('audio_file', wavBlob, 'chunk.wav')
-            
-            const response = await interviewService.transcribeAudio(formData)
-            const transcriptText = response.data.transcript || ''
-            
-            console.log(`✅ Chunk transcribed: "${transcriptText}"`)
-            
-            // Add to accumulated transcript
-            if (transcriptText.trim()) {
-              transcriptChunksRef.current.push(transcriptText)
-              
-              // Update subtitle with accumulated text
-              const fullTranscript = transcriptChunksRef.current.join(' ')
-              setSubtitle(`You: ${fullTranscript}`)
-            }
-            
-          } catch (err) {
-            console.error('❌ Chunk transcription failed:', err)
-            console.error('Error details:', err.response?.data)
-          }
-          
-          // Reset chunk start time for next chunk
-          chunkStartTime = Date.now()
+          audioChunksRef.current.push(event.data)
         }
       }
       
       mediaRecorderRef.current.onstop = async () => {
-        const totalTime = ((Date.now() - recordingStartTimeRef.current) / 1000).toFixed(1)
-        console.log(`🎤 Recording stopped after ${totalTime}s`)
-        console.log(`📊 Total transcript chunks: ${transcriptChunksRef.current.length}`)
+        console.log('🎤 Recording stopped, processing audio...')
         
-        // Combine all transcripts
-        const fullTranscript = transcriptChunksRef.current.join(' ').trim()
-        console.log(`📝 Full transcript: "${fullTranscript}"`)
+        // Create blob from chunks
+        const webmBlob = new Blob(audioChunksRef.current, { type: mimeType })
+        console.log(`📦 Audio blob: ${webmBlob.size} bytes`)
         
-        if (!fullTranscript) {
-          console.warn('⚠️ No transcript available')
-          setError('No speech detected. Please try again.')
-          setAvatarState('idle')
-          setStatus('Ready to record')
-          stream.getTracks().forEach(track => track.stop())
-          return
-        }
+        // Convert to WAV
+        const wavBlob = await convertToWav(webmBlob)
+        console.log(`📦 WAV blob: ${wavBlob.size} bytes`)
         
-        // Submit the full transcript as text
-        await submitTranscript(fullTranscript)
+        // Send to backend - backend will handle chunking automatically
+        await submitAnswer(wavBlob)
         stream.getTracks().forEach(track => track.stop())
       }
       
-      // Start recording with 25-second intervals
-      // This triggers ondataavailable every 25 seconds automatically
-      mediaRecorderRef.current.start(25000)
+      mediaRecorderRef.current.start()
       setIsRecording(true)
       setAvatarState('listening')
-      setStatus('Recording... (Speak naturally - no time limit)')
+      setStatus('Recording your answer...')
       
     } catch (err) {
       setError('Failed to start recording. Please check microphone permissions.')
