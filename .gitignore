@@ -20,14 +20,14 @@ build/
 # Environment variables (NEVER commit these!)
 .env
 .env.*
-!.env.example
+.env.example
 *.env
 backend/.env
 backend/.env.*
+backend/.env.example
 frontend/.env
 frontend/.env.*
-!backend/.env.example
-!frontend/.env.example
+frontend/.env.example
 
 # Uploads
 backend/uploads/
