@@ -147,6 +147,7 @@ class SpeechService:
         """
         Transcribe audio to text using Sarvam STT API.
         Automatically handles audio longer than 30 seconds by splitting into chunks.
+        Converts WebM to WAV if needed using ffmpeg.
         """
         try:
             # Try to get duration first
@@ -154,13 +155,32 @@ class SpeechService:
             
             if duration > 0:
                 print(f"✅ Audio duration: {duration:.2f} seconds (WAV format detected)")
+                wav_bytes = audio_bytes  # Already WAV
             else:
-                print(f"⚠️ Audio duration: unknown (not a valid WAV file)")
+                print(f"⚠️ Not a valid WAV file, attempting ffmpeg conversion...")
+                print(f"Input audio size: {len(audio_bytes)} bytes")
+                
+                # Try to convert using ffmpeg
+                wav_bytes = self._convert_to_wav(audio_bytes)
+                
+                if not wav_bytes:
+                    print(f"❌ FFmpeg conversion failed")
+                    return None
+                
+                print(f"✅ Converted to WAV: {len(wav_bytes)} bytes")
+                
+                # Get duration of converted WAV
+                duration = self._get_audio_duration(wav_bytes)
+                if duration > 0:
+                    print(f"✅ Converted audio duration: {duration:.2f} seconds")
+                else:
+                    print(f"❌ Failed to get duration even after conversion")
+                    return None
             
-            # If duration is known and under 30 seconds, transcribe directly
-            if duration > 0 and duration <= 30.0:
+            # If duration is under 30 seconds, transcribe directly
+            if duration <= 30.0:
                 print(f"✅ Audio under 30s, transcribing directly...")
-                transcript = await self._transcribe_single_chunk(audio_bytes, language)
+                transcript = await self._transcribe_single_chunk(wav_bytes, language)
                 if transcript:
                     print(f"✅ STT Success - Transcript: {transcript[:100]}...")
                     return transcript
@@ -168,41 +188,34 @@ class SpeechService:
                     print(f"❌ Transcription failed")
                     return None
             
-            # If duration is known and over 30 seconds, split into chunks
-            if duration > 30.0:
-                print(f"⚠️ Audio exceeds 30s limit ({duration:.2f}s)")
-                print(f"🔄 Splitting into 25-second chunks...")
-                chunks = self._split_audio_chunks(audio_bytes, chunk_duration=25.0)
-                print(f"✅ Split into {len(chunks)} chunks")
-                
-                # Transcribe each chunk
-                transcripts = []
-                for i, chunk in enumerate(chunks):
-                    chunk_duration = self._get_audio_duration(chunk)
-                    print(f"📤 Transcribing chunk {i+1}/{len(chunks)} ({chunk_duration:.2f}s)...")
-                    
-                    transcript = await self._transcribe_single_chunk(chunk, language)
-                    if transcript:
-                        transcripts.append(transcript)
-                        print(f"✅ Chunk {i+1} transcribed: {transcript[:50]}...")
-                    else:
-                        print(f"❌ Failed to transcribe chunk {i+1}")
-                
-                # Combine all transcripts
-                if transcripts:
-                    full_transcript = " ".join(transcripts)
-                    print(f"✅ STT Success - Combined transcript ({len(transcripts)} chunks)")
-                    print(f"Full transcript: {full_transcript[:200]}...")
-                    return full_transcript
-                else:
-                    print("❌ Failed to transcribe any chunks")
-                    return None
+            # If duration is over 30 seconds, split into chunks
+            print(f"⚠️ Audio exceeds 30s limit ({duration:.2f}s)")
+            print(f"🔄 Splitting into 25-second chunks...")
+            chunks = self._split_audio_chunks(wav_bytes, chunk_duration=25.0)
+            print(f"✅ Split into {len(chunks)} chunks")
             
-            # If we reach here, duration is unknown (not a valid WAV)
-            print(f"❌ Cannot process audio: Invalid WAV format")
-            print(f"Audio size: {len(audio_bytes)} bytes")
-            print(f"Expected: WAV file with RIFF header")
-            return None
+            # Transcribe each chunk
+            transcripts = []
+            for i, chunk in enumerate(chunks):
+                chunk_duration = self._get_audio_duration(chunk)
+                print(f"📤 Transcribing chunk {i+1}/{len(chunks)} ({chunk_duration:.2f}s)...")
+                
+                transcript = await self._transcribe_single_chunk(chunk, language)
+                if transcript:
+                    transcripts.append(transcript)
+                    print(f"✅ Chunk {i+1} transcribed: {transcript[:50]}...")
+                else:
+                    print(f"❌ Failed to transcribe chunk {i+1}")
+            
+            # Combine all transcripts
+            if transcripts:
+                full_transcript = " ".join(transcripts)
+                print(f"✅ STT Success - Combined transcript ({len(transcripts)} chunks)")
+                print(f"Full transcript: {full_transcript[:200]}...")
+                return full_transcript
+            else:
+                print("❌ Failed to transcribe any chunks")
+                return None
                 
         except Exception as e:
             print(f"❌ Error in transcribe_audio: {e}")

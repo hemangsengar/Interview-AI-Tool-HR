@@ -688,22 +688,10 @@ const InterviewRoom = () => {
         const webmBlob = new Blob(audioChunksRef.current, { type: mimeType })
         console.log(`📦 WebM blob: ${webmBlob.size} bytes, type: ${webmBlob.type}`)
         
-        try {
-          // Convert to WAV
-          console.log('Starting WAV conversion...')
-          const wavBlob = await convertToWav(webmBlob)
-          console.log(`✅ WAV conversion successful: ${wavBlob.size} bytes`)
-          
-          // Send to backend - backend will handle chunking automatically
-          await submitAnswer(wavBlob)
-        } catch (err) {
-          console.error('❌ Failed to convert or submit audio:', err)
-          setError('Failed to process audio. Please try again.')
-          setAvatarState('idle')
-          setStatus('Error processing audio')
-        } finally {
-          stream.getTracks().forEach(track => track.stop())
-        }
+        // Send WebM directly to backend - backend will convert to WAV using ffmpeg
+        console.log('📤 Sending WebM to backend for conversion and transcription...')
+        await submitAnswer(webmBlob)
+        stream.getTracks().forEach(track => track.stop())
       }
       
       mediaRecorderRef.current.start()
