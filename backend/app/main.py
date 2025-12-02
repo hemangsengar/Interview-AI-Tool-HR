@@ -32,8 +32,26 @@ os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 from .database import init_db
 init_db()
 
-# Mount static files for audio
-app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+# Custom audio file endpoint (better than StaticFiles for audio)
+from fastapi.responses import FileResponse
+from pathlib import Path
+
+@app.get("/uploads/{candidate_name}/{filename}")
+async def serve_audio(candidate_name: str, filename: str):
+    """Serve audio files with proper headers for browser playback."""
+    file_path = Path(settings.UPLOAD_DIR) / candidate_name / filename
+    if not file_path.exists():
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Audio file not found")
+    
+    return FileResponse(
+        file_path,
+        media_type="audio/wav",
+        headers={
+            "Accept-Ranges": "bytes",
+            "Cache-Control": "no-cache"
+        }
+    )
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
