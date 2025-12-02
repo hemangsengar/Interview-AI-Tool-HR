@@ -664,10 +664,14 @@ const InterviewRoom = () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       
-      // Use webm format (browser native)
-      let mimeType = 'audio/webm'
-      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-        mimeType = 'audio/webm;codecs=opus'
+      // Try WAV format first, fallback to WebM
+      let mimeType = 'audio/wav'
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        console.log('⚠️ WAV not supported, using WebM')
+        mimeType = 'audio/webm'
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          mimeType = 'audio/webm;codecs=opus'
+        }
       }
       
       console.log('🎤 Recording with:', mimeType)
@@ -685,13 +689,30 @@ const InterviewRoom = () => {
         console.log('🎤 Recording stopped, processing audio...')
         
         // Create blob from chunks
-        const webmBlob = new Blob(audioChunksRef.current, { type: mimeType })
-        console.log(`📦 WebM blob: ${webmBlob.size} bytes, type: ${webmBlob.type}`)
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType })
+        console.log(`📦 Audio blob: ${audioBlob.size} bytes, type: ${audioBlob.type}`)
         
-        // Send WebM directly to backend - backend will convert to WAV using ffmpeg
-        console.log('📤 Sending WebM to backend for conversion and transcription...')
-        await submitAnswer(webmBlob)
-        stream.getTracks().forEach(track => track.stop())
+        try {
+          let wavBlob = audioBlob
+          
+          // If not WAV, convert it
+          if (!mimeType.includes('wav')) {
+            console.log('🔄 Converting to WAV...')
+            wavBlob = await convertToWav(audioBlob)
+            console.log(`✅ Converted to WAV: ${wavBlob.size} bytes`)
+          } else {
+            console.log('✅ Already WAV format')
+          }
+          
+          // Send WAV to backend
+          await submitAnswer(wavBlob)
+        } catch (err) {
+          console.error('❌ Audio processing failed:', err)
+          setError('Failed to process audio. Please try again.')
+          setAvatarState('idle')
+        } finally {
+          stream.getTracks().forEach(track => track.stop())
+        }
       }
       
       mediaRecorderRef.current.start()

@@ -23,45 +23,44 @@ class SpeechService:
         }
     
     def _convert_to_wav(self, audio_bytes: bytes) -> Optional[bytes]:
-        """Convert any audio format to WAV using ffmpeg."""
+        """Convert any audio format to WAV using pydub."""
         try:
+            from pydub import AudioSegment
+            import io
+            
+            print("🔄 Converting audio to WAV using pydub...")
+            
             # Create temp files
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.input') as input_file:
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as input_file:
                 input_file.write(audio_bytes)
                 input_path = input_file.name
             
-            output_path = input_path.replace('.input', '.wav')
+            print(f"Input file: {input_path}")
             
-            # Convert to WAV using ffmpeg
-            cmd = [
-                'ffmpeg', '-i', input_path,
-                '-acodec', 'pcm_s16le',
-                '-ar', '16000',
-                '-ac', '1',
-                '-y',
-                output_path
-            ]
+            # Load audio using pydub (supports webm, mp3, etc.)
+            audio = AudioSegment.from_file(input_path, format="webm")
+            print(f"Audio loaded: {len(audio)}ms, {audio.frame_rate}Hz, {audio.channels} channels")
             
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            # Convert to mono 16kHz for better STT
+            audio = audio.set_frame_rate(16000).set_channels(1)
+            print(f"Converted to: 16000Hz, mono")
             
-            if result.returncode != 0:
-                print(f"FFmpeg error: {result.stderr}")
-                # Clean up
-                Path(input_path).unlink(missing_ok=True)
-                return None
+            # Export as WAV
+            output_buffer = io.BytesIO()
+            audio.export(output_buffer, format="wav")
+            wav_bytes = output_buffer.getvalue()
             
-            # Read converted WAV
-            with open(output_path, 'rb') as f:
-                wav_bytes = f.read()
+            print(f"✅ WAV conversion successful: {len(wav_bytes)} bytes")
             
-            # Clean up temp files
+            # Clean up temp file
             Path(input_path).unlink(missing_ok=True)
-            Path(output_path).unlink(missing_ok=True)
             
             return wav_bytes
             
         except Exception as e:
-            print(f"Error converting audio to WAV: {e}")
+            print(f"❌ Error converting audio to WAV: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def _get_audio_duration(self, audio_bytes: bytes) -> float:
@@ -146,52 +145,37 @@ class SpeechService:
     async def transcribe_audio(self, audio_bytes: bytes, language: str = "en-IN") -> Optional[str]:
         """
         Transcribe audio to text using Sarvam STT API.
-        Automatically handles audio longer than 30 seconds by splitting into chunks.
-        Converts WebM to WAV if needed using ffmpeg.
+        ONLY accepts WAV format. Frontend must convert to WAV.
+        Automatically splits WAV files longer than 30 seconds.
         """
         try:
-            # Try to get duration first
+            # Get duration from WAV header
             duration = self._get_audio_duration(audio_bytes)
             
-            if duration > 0:
-                print(f"✅ Audio duration: {duration:.2f} seconds (WAV format detected)")
-                wav_bytes = audio_bytes  # Already WAV
-            else:
-                print(f"⚠️ Not a valid WAV file, attempting ffmpeg conversion...")
-                print(f"Input audio size: {len(audio_bytes)} bytes")
-                
-                # Try to convert using ffmpeg
-                wav_bytes = self._convert_to_wav(audio_bytes)
-                
-                if not wav_bytes:
-                    print(f"❌ FFmpeg conversion failed")
-                    return None
-                
-                print(f"✅ Converted to WAV: {len(wav_bytes)} bytes")
-                
-                # Get duration of converted WAV
-                duration = self._get_audio_duration(wav_bytes)
-                if duration > 0:
-                    print(f"✅ Converted audio duration: {duration:.2f} seconds")
-                else:
-                    print(f"❌ Failed to get duration even after conversion")
-                    return None
+            if duration <= 0:
+                print(f"❌ Invalid WAV file - cannot read duration")
+                print(f"File size: {len(audio_bytes)} bytes")
+                print(f"Expected: WAV file with RIFF header")
+                return None
+            
+            print(f"✅ WAV audio duration: {duration:.2f} seconds")
             
             # If duration is under 30 seconds, transcribe directly
             if duration <= 30.0:
                 print(f"✅ Audio under 30s, transcribing directly...")
-                transcript = await self._transcribe_single_chunk(wav_bytes, language)
+                transcript = await self._transcribe_single_chunk(audio_bytes, language)
                 if transcript:
-                    print(f"✅ STT Success - Transcript: {transcript[:100]}...")
+                    print(f"✅ STT Success: {transcript[:100]}...")
                     return transcript
                 else:
                     print(f"❌ Transcription failed")
                     return None
             
-            # If duration is over 30 seconds, split into chunks
+            # If duration is over 30 seconds, split into 25-second chunks
             print(f"⚠️ Audio exceeds 30s limit ({duration:.2f}s)")
             print(f"🔄 Splitting into 25-second chunks...")
-            chunks = self._split_audio_chunks(wav_bytes, chunk_duration=25.0)
+            
+            chunks = self._split_audio_chunks(audio_bytes, chunk_duration=25.0)
             print(f"✅ Split into {len(chunks)} chunks")
             
             # Transcribe each chunk
@@ -203,15 +187,14 @@ class SpeechService:
                 transcript = await self._transcribe_single_chunk(chunk, language)
                 if transcript:
                     transcripts.append(transcript)
-                    print(f"✅ Chunk {i+1} transcribed: {transcript[:50]}...")
+                    print(f"✅ Chunk {i+1}: {transcript[:50]}...")
                 else:
-                    print(f"❌ Failed to transcribe chunk {i+1}")
+                    print(f"❌ Chunk {i+1} failed")
             
             # Combine all transcripts
             if transcripts:
                 full_transcript = " ".join(transcripts)
-                print(f"✅ STT Success - Combined transcript ({len(transcripts)} chunks)")
-                print(f"Full transcript: {full_transcript[:200]}...")
+                print(f"✅ Combined transcript ({len(transcripts)} chunks): {full_transcript[:200]}...")
                 return full_transcript
             else:
                 print("❌ Failed to transcribe any chunks")
