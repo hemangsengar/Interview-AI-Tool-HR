@@ -990,7 +990,7 @@ CRITICAL RULES:
 - Make it suitable for voice/speech
 - MAXIMUM 400 CHARACTERS - Keep it brief
 
-Return ONLY the question text, no formatting. MUST be under 400 characters.
+Return ONLY the question text, no formatting. MUST be under 400 characters."""
 
         elif question_type in ["hr", "behavioral"]:
             prompt = f"""You are conducting behavioral/HR interview. Generate ONE behavioral question.
@@ -1018,7 +1018,7 @@ DO NOT ask technical questions.
 DO NOT ask about specific projects or technologies.
 ONLY ask about behavior, motivation, and soft skills.
 
-Return ONLY the question text, no formatting. MUST be under 400 characters.
+Return ONLY the question text, no formatting. MUST be under 400 characters."""
 
         else:
             prompt = f"""Generate an interview question based on:
