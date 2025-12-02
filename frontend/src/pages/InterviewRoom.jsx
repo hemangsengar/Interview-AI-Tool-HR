@@ -650,52 +650,71 @@ const InterviewRoom = () => {
       }
       
       console.log('🎤 Recording with:', mimeType)
-      console.log('🎤 Using streaming buffer approach - will auto-chunk every 25 seconds')
+      console.log('🎤 Using 25-second auto-chunking to handle Sarvam 30s limit')
       
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType })
-      audioChunksRef.current = []
-      transcriptChunksRef.current = []
+      audioChunksRef.current = [] // Buffer for current segment
+      transcriptChunksRef.current = [] // Accumulated transcripts
       recordingStartTimeRef.current = Date.now()
       
-      mediaRecorderRef.current.ondataavailable = (event) => {
+      // This fires every 25 seconds OR when stop() is called
+      mediaRecorderRef.current.ondataavailable = async (event) => {
         if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data)
-          const chunkNumber = audioChunksRef.current.length
           const elapsedTime = ((Date.now() - recordingStartTimeRef.current) / 1000).toFixed(1)
-          console.log(`🎤 Chunk ${chunkNumber} collected: ${event.data.size} bytes (${elapsedTime}s elapsed)`)
+          console.log(`🎤 Chunk received: ${event.data.size} bytes (${elapsedTime}s elapsed)`)
+          
+          // Convert this chunk to WAV
+          const webmBlob = new Blob([event.data], { type: mimeType })
+          const wavBlob = await convertToWav(webmBlob)
+          
+          console.log(`📤 Sending ${elapsedTime}s segment to STT (${wavBlob.size} bytes)`)
+          
+          // Send this chunk to backend for transcription
+          try {
+            const formData = new FormData()
+            formData.append('audio_file', wavBlob, 'chunk.wav')
+            
+            const response = await interviewService.transcribeAudio(formData)
+            const transcriptText = response.data.transcript || ''
+            
+            console.log(`✅ Chunk transcribed: "${transcriptText}"`)
+            
+            // Add to accumulated transcript
+            transcriptChunksRef.current.push(transcriptText)
+            
+            // Update subtitle with accumulated text
+            const fullTranscript = transcriptChunksRef.current.join(' ')
+            setSubtitle(`You: ${fullTranscript}`)
+            
+          } catch (err) {
+            console.error('❌ Chunk transcription failed:', err)
+          }
+          
+          // Reset recording start time for next chunk
+          recordingStartTimeRef.current = Date.now()
         }
       }
       
       mediaRecorderRef.current.onstop = async () => {
-        const totalTime = ((Date.now() - recordingStartTimeRef.current) / 1000).toFixed(1)
-        console.log(`🎤 Recording stopped after ${totalTime}s`)
-        console.log(`📊 Total chunks: ${audioChunksRef.current.length}`)
+        console.log(`🎤 Recording stopped`)
+        console.log(`📊 Total transcript chunks: ${transcriptChunksRef.current.length}`)
         
-        // Combine all WebM chunks
-        const webmBlob = new Blob(audioChunksRef.current, { type: mimeType })
-        console.log(`🎤 WebM audio: ${webmBlob.size} bytes`)
+        // Combine all transcripts
+        const fullTranscript = transcriptChunksRef.current.join(' ').trim()
+        console.log(`📝 Full transcript: "${fullTranscript}"`)
         
-        // Convert to WAV for proper chunking
-        const wavBlob = await convertToWav(webmBlob)
-        console.log(`🎤 WAV audio: ${wavBlob.size} bytes`)
-        
-        await submitAnswer(wavBlob)
+        // Submit the full transcript as text
+        await submitTranscript(fullTranscript)
         stream.getTracks().forEach(track => track.stop())
       }
       
-      // Start recording with 25-second chunks
-      // This will trigger ondataavailable every 25 seconds
+      // Start recording with 25-second intervals
+      // This triggers ondataavailable every 25 seconds automatically
       mediaRecorderRef.current.start(25000)
       setIsRecording(true)
       setAvatarState('listening')
-      setStatus('Recording... (Keep it concise - aim for 20-25 seconds)')
+      setStatus('Recording... (Speak naturally - no time limit)')
       
-      // Show warning after 25 seconds
-      setTimeout(() => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-          setStatus('Recording... (⚠️ Over 25s - consider wrapping up)')
-        }
-      }, 25000)
     } catch (err) {
       setError('Failed to start recording. Please check microphone permissions.')
     }
@@ -716,6 +735,29 @@ const InterviewRoom = () => {
       setShowCodeEditor(false)
       
       const response = await interviewService.submitAnswer(sessionId, audioBlob)
+      const evaluation = response.data
+      
+      if (evaluation.is_interview_complete) {
+        handleInterviewComplete()
+      } else {
+        await getNextQuestion()
+      }
+    } catch (err) {
+      setError('Failed to submit answer')
+      setAvatarState('idle')
+      setStatus('Error - Please try again')
+    }
+  }
+
+  const submitTranscript = async (transcriptText) => {
+    try {
+      setAvatarState('thinking')
+      setStatus('Evaluating your answer...')
+      setSubtitle('')
+      setShowCodeEditor(false)
+      
+      // Submit transcript as text answer
+      const response = await interviewService.submitTextAnswer(sessionId, transcriptText)
       const evaluation = response.data
       
       if (evaluation.is_interview_complete) {

@@ -420,6 +420,118 @@ async def submit_code_answer(
     )
 
 
+@router.post("/transcribe")
+async def transcribe_audio_chunk(
+    audio_file: UploadFile = File(...)
+):
+    """Transcribe a single audio chunk (for real-time chunking)."""
+    try:
+        audio_bytes = await audio_file.read()
+        print(f"[TRANSCRIBE] Received audio chunk: {len(audio_bytes)} bytes")
+        
+        # Transcribe this chunk
+        transcript = await speech_service.transcribe_audio(audio_bytes)
+        
+        if not transcript:
+            transcript = ""
+        
+        print(f"[TRANSCRIBE] Result: '{transcript}'")
+        
+        return {"transcript": transcript}
+    except Exception as e:
+        print(f"[TRANSCRIBE] Error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Transcription failed: {str(e)}"
+        )
+
+
+class TextAnswerRequest(BaseModel):
+    transcript: str
+
+
+@router.post("/{session_id}/text-answer", response_model=AnswerEvaluation)
+async def submit_text_answer(
+    session_id: int,
+    request: TextAnswerRequest,
+    db: Session = Depends(get_db)
+):
+    """Submit an answer as text transcript (from chunked transcription)."""
+    session = db.query(InterviewSession).filter(
+        InterviewSession.id == session_id
+    ).first()
+    
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interview session not found"
+        )
+    
+    # Get the latest question without an answer
+    question = db.query(InterviewQuestion).filter(
+        InterviewQuestion.session_id == session_id,
+        ~InterviewQuestion.answer.has()
+    ).order_by(InterviewQuestion.index.desc()).first()
+    
+    if not question:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No pending question found"
+        )
+    
+    transcript = request.transcript
+    print(f"[TEXT ANSWER] Question ID: {question.id}, Index: {question.index}")
+    print(f"[TEXT ANSWER] Transcript: '{transcript}'")
+    
+    # Evaluate answer
+    candidate = session.candidate
+    job = candidate.job
+    
+    evaluation = llm_service.evaluate_answer(
+        job.jd_raw_text,
+        question.question_text,
+        transcript,
+        question.skill
+    )
+    
+    # Create answer record (no audio file)
+    answer = InterviewAnswer(
+        question_id=question.id,
+        answer_transcript_text=transcript,
+        audio_file_path=None,  # No audio file for chunked transcription
+        correctness_score=evaluation["correctness"],
+        depth_score=evaluation["depth"],
+        clarity_score=evaluation["clarity"],
+        relevance_score=evaluation["relevance"],
+        comment_text=evaluation["comment"]
+    )
+    
+    db.add(answer)
+    
+    # Update question index
+    metadata = session.session_metadata or {}
+    metadata["current_question_index"] = question.index
+    session.session_metadata = metadata
+    
+    db.commit()
+    
+    # Check if this was the last question
+    interview_plan = metadata.get("interview_plan", [])
+    is_complete = question.index >= len(interview_plan)
+    
+    if is_complete:
+        finalize_interview(session, db)
+    
+    return AnswerEvaluation(
+        correctness=evaluation["correctness"],
+        depth=evaluation["depth"],
+        clarity=evaluation["clarity"],
+        relevance=evaluation["relevance"],
+        comment=evaluation["comment"],
+        is_interview_complete=is_complete
+    )
+
+
 @router.post("/{session_id}/answers", response_model=AnswerEvaluation)
 async def submit_answer(
     session_id: int,

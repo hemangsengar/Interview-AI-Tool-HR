@@ -63,5 +63,13 @@ export const interviewService = {
     }),
   endEarly: (sessionId) => apiClient.post(`/api/interviews/${sessionId}/end`),
   getResults: (sessionId) => apiClient.get(`/api/interviews/${sessionId}/results`),
-  getSession: (sessionId) => apiClient.get(`/api/interviews/${sessionId}`)
+  getSession: (sessionId) => apiClient.get(`/api/interviews/${sessionId}`),
+  transcribeAudio: (formData) => 
+    apiClient.post('/api/interviews/transcribe', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  submitTextAnswer: (sessionId, transcriptText) => 
+    apiClient.post(`/api/interviews/${sessionId}/text-answer`, {
+      transcript: transcriptText
+    })
 }
