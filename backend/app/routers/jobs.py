@@ -1,5 +1,5 @@
 """Job management routes."""
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List
@@ -14,6 +14,7 @@ from ..schemas import JobCreate, JobResponse, CandidateCreate, CandidateResponse
 from ..auth import get_current_user
 from ..services.parsing_service import parsing_service
 from datetime import datetime
+from ..middleware.rate_limiter import rate_limiter
 
 router = APIRouter()
 
@@ -33,11 +34,16 @@ def generate_job_code(db: Session) -> str:
 
 @router.post("", response_model=JobResponse, status_code=status.HTTP_201_CREATED)
 async def create_job(
+    request: Request,
     job_data: JobCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create a new job posting with unique job code."""
+    # Rate limit: 20 job creations per day per IP
+    client_ip = request.client.host if request.client else "unknown"
+    rate_limiter.check_rate_limit(client_ip, max_requests=20, window_seconds=86400)
+    
     job_code = generate_job_code(db)
     
     new_job = Job(
@@ -164,6 +170,7 @@ async def list_candidates(
 
 @router.post("/{job_id}/candidates", status_code=status.HTTP_201_CREATED)
 async def register_candidate(
+    request: Request,
     job_id: int,
     name: str = Form(...),
     email: str = Form(...),
@@ -172,6 +179,10 @@ async def register_candidate(
     db: Session = Depends(get_db)
 ):
     """Register a candidate for a job and create interview session."""
+    # Rate limit: 5 candidate applications per hour per IP
+    client_ip = request.client.host if request.client else "unknown"
+    rate_limiter.check_rate_limit(client_ip, max_requests=5, window_seconds=3600)
+    
     # Verify job exists
     job = db.query(Job).filter(Job.id == job_id).first()
     if not job:

@@ -1,5 +1,5 @@
 """Interview management routes."""
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, WebSocket, WebSocketDisconnect, Form
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, WebSocket, WebSocketDisconnect, Form, Request
 from sqlalchemy.orm import Session
 from typing import Optional
 import os
@@ -21,6 +21,7 @@ from ..services.llm_service import llm_service
 from ..services.speech_service import speech_service
 from ..services.parsing_service import parsing_service
 from ..config import settings
+from ..middleware.rate_limiter import rate_limiter
 
 router = APIRouter()
 
@@ -31,8 +32,12 @@ class TTSRequest(BaseModel):
 
 
 @router.post("/tts")
-async def generate_tts(request: TTSRequest):
+async def generate_tts(http_request: Request, request: TTSRequest):
     """Generate TTS audio for any text using Sarvam API."""
+    # Rate limit: 100 TTS requests per hour per IP
+    client_ip = http_request.client.host if http_request.client else "unknown"
+    rate_limiter.check_rate_limit(client_ip, max_requests=100, window_seconds=3600)
+    
     print(f"[TTS ENDPOINT] Received request with speaker: {request.speaker}")
     print(f"[TTS ENDPOINT] Request object: {request}")
     try:
@@ -67,10 +72,15 @@ class StartInterviewRequest(BaseModel):
 @router.post("/{session_id}/start", response_model=InterviewStartResponse)
 async def start_interview(
     session_id: int,
+    http_request: Request,
     request: StartInterviewRequest,
     db: Session = Depends(get_db)
 ):
     """Start an interview session and generate interview plan."""
+    # Rate limit: 3 interview starts per day per IP
+    client_ip = http_request.client.host if http_request.client else "unknown"
+    rate_limiter.check_rate_limit(client_ip, max_requests=3, window_seconds=86400)
+    
     # Get speaker preference
     speaker = request.speaker
     print(f"[START INTERVIEW] Speaker selected: {speaker}")

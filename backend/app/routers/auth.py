@@ -1,10 +1,11 @@
 """Authentication routes."""
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import User
 from ..schemas import UserSignup, UserLogin, Token, UserResponse
 from ..auth import hash_password, verify_password, create_access_token
+from ..middleware.rate_limiter import rate_limiter
 
 router = APIRouter()
 
@@ -39,8 +40,12 @@ async def migrate_database(db: Session = Depends(get_db)):
 
 
 @router.post("/signup", response_model=Token, status_code=status.HTTP_201_CREATED)
-async def signup(user_data: UserSignup, db: Session = Depends(get_db)):
+async def signup(request: Request, user_data: UserSignup, db: Session = Depends(get_db)):
     """Register a new HR user."""
+    # Rate limit: 5 signups per hour per IP
+    client_ip = request.client.host if request.client else "unknown"
+    rate_limiter.check_rate_limit(client_ip, max_requests=5, window_seconds=3600)
+    
     try:
         print(f"[SIGNUP] Received data: name={user_data.name}, email={user_data.email}")
         
@@ -90,8 +95,12 @@ async def signup(user_data: UserSignup, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token)
-async def login(credentials: UserLogin, db: Session = Depends(get_db)):
+async def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db)):
     """Login HR user."""
+    # Rate limit: 10 login attempts per 5 minutes per IP
+    client_ip = request.client.host if request.client else "unknown"
+    rate_limiter.check_rate_limit(client_ip, max_requests=10, window_seconds=300)
+    
     print(f"[LOGIN] Attempt for email: {credentials.email}")
     
     # Find user

@@ -32,6 +32,23 @@ os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 from .database import init_db
 init_db()
 
+# Background task to cleanup old rate limit entries
+from contextlib import asynccontextmanager
+import asyncio
+from .middleware.rate_limiter import rate_limiter
+
+async def cleanup_rate_limiter():
+    """Periodically cleanup old rate limiter entries."""
+    while True:
+        await asyncio.sleep(3600)  # Run every hour
+        rate_limiter.cleanup_old_entries()
+        print("[RATE LIMITER] Cleaned up old entries")
+
+@app.on_event("startup")
+async def startup_event():
+    """Start background tasks on application startup."""
+    asyncio.create_task(cleanup_rate_limiter())
+
 # Custom audio file endpoint (better than StaticFiles for audio)
 from fastapi.responses import FileResponse
 from pathlib import Path

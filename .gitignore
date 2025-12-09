@@ -12,6 +12,8 @@ backend/venv/
 dist/
 build/
 
+gemini_chat.py
+
 # Database
 *.db
 *.sqlite
