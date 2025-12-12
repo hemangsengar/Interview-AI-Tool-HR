@@ -464,9 +464,12 @@ const InterviewRoom = () => {
         setAvatarState('speaking')
         setStatus('Speaking...')
         
+        // Construct full URL, handling trailing/leading slashes
+        const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '')
+        const audioPath = question.audio_url.startsWith('/') ? question.audio_url : `/${question.audio_url}`
         const fullUrl = question.audio_url.startsWith('http') 
           ? question.audio_url 
-          : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}${question.audio_url}`
+          : `${baseUrl}${audioPath}`
         
         console.log('🔊 Full audio URL:', fullUrl)
         
