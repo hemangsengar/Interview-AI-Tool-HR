@@ -592,7 +592,8 @@ async def submit_answer(
         f.write(audio_bytes)
     
     print(f"[ANSWER AUDIO] Answer audio saved successfully")
-    audio_path = str(audio_path)
+    # Store relative path for portability (just candidate_name/filename)
+    relative_audio_path = f"{safe_name}/{audio_filename}"
     
     # Transcribe audio
     transcript = await speech_service.transcribe_audio(audio_bytes)
@@ -615,7 +616,7 @@ async def submit_answer(
     answer = InterviewAnswer(
         question_id=question.id,
         answer_transcript_text=transcript,
-        audio_file_path=audio_path,
+        audio_file_path=relative_audio_path,
         correctness_score=evaluation["correctness"],
         depth_score=evaluation["depth"],
         clarity_score=evaluation["clarity"],

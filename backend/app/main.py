@@ -57,10 +57,18 @@ from pathlib import Path
 async def serve_audio(candidate_name: str, filename: str):
     """Serve audio files with proper headers for browser playback."""
     file_path = Path(settings.UPLOAD_DIR) / candidate_name / filename
+    
+    print(f"[SERVE AUDIO] Requested: /uploads/{candidate_name}/{filename}")
+    print(f"[SERVE AUDIO] Looking for file at: {file_path}")
+    print(f"[SERVE AUDIO] UPLOAD_DIR setting: {settings.UPLOAD_DIR}")
+    print(f"[SERVE AUDIO] File exists: {file_path.exists()}")
+    
     if not file_path.exists():
         from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="Audio file not found")
+        print(f"[SERVE AUDIO] ERROR: File not found at {file_path}")
+        raise HTTPException(status_code=404, detail=f"Audio file not found: {candidate_name}/{filename}")
     
+    print(f"[SERVE AUDIO] Serving file: {file_path}")
     return FileResponse(
         file_path,
         media_type="audio/wav",

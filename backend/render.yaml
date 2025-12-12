@@ -22,7 +22,7 @@ services:
       - key: UPLOAD_DIR
         value: /opt/render/project/src/uploads
     disk:
-      name: uploads
+      name: uploads-disk
       mountPath: /opt/render/project/src/uploads
       sizeGB: 1
 
