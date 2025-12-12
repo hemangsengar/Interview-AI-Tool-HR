@@ -544,6 +544,11 @@ class LLMService:
         self.last_quota_error = None
         self.consecutive_quota_errors = 0
 
+        # Caching for interview plans and questions
+        self.plan_cache = {}  # Cache interview plans by JD hash
+        self.question_cache = {}  # Cache questions by plan_item hash
+        self.cache_expiry = 3600  # 1 hour cache expiry
+
         try:
             models = list(genai.list_models())
             available_models: List[str] = []
@@ -587,6 +592,69 @@ class LLMService:
 
         self.model = genai.GenerativeModel(selected_model)
 
+    def _get_cache_key(self, jd_text: str, resume_data: Dict[str, Any]) -> str:
+        """Generate a cache key for interview plans."""
+        import hashlib
+        key_data = f"{jd_text[:500]}_{str(sorted(resume_data.get('skills', [])))}_{resume_data.get('experience_years', 0)}"
+        return hashlib.md5(key_data.encode()).hexdigest()
+
+    def _get_question_cache_key(self, plan_item: Dict[str, Any], jd_text: str, resume_summary: Dict[str, Any]) -> str:
+        """Generate a cache key for questions."""
+        import hashlib
+        key_data = f"{plan_item['type']}_{plan_item.get('skill')}_{plan_item['difficulty']}_{jd_text[:200]}_{str(resume_summary.get('skills', [])[:5])}"
+        return hashlib.md5(key_data.encode()).hexdigest()
+
+    def _is_cache_valid(self, cache_entry: Dict[str, Any]) -> bool:
+        """Check if cache entry is still valid."""
+        import time
+        return time.time() - cache_entry.get('timestamp', 0) < self.cache_expiry
+
+    def _get_cached_plan(self, jd_text: str, resume_data: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
+        """Get cached interview plan if available and valid."""
+        cache_key = self._get_cache_key(jd_text, resume_data)
+        if cache_key in self.plan_cache:
+            cache_entry = self.plan_cache[cache_key]
+            if self._is_cache_valid(cache_entry):
+                print(f"[CACHE] Using cached interview plan for key: {cache_key[:8]}")
+                return cache_entry['plan']
+            else:
+                # Remove expired cache
+                del self.plan_cache[cache_key]
+        return None
+
+    def _cache_plan(self, jd_text: str, resume_data: Dict[str, Any], plan: List[Dict[str, Any]]):
+        """Cache an interview plan."""
+        import time
+        cache_key = self._get_cache_key(jd_text, resume_data)
+        self.plan_cache[cache_key] = {
+            'plan': plan,
+            'timestamp': time.time()
+        }
+        print(f"[CACHE] Cached interview plan for key: {cache_key[:8]}")
+
+    def _get_cached_question(self, plan_item: Dict[str, Any], jd_text: str, resume_summary: Dict[str, Any]) -> Optional[str]:
+        """Get cached question if available and valid."""
+        cache_key = self._get_question_cache_key(plan_item, jd_text, resume_summary)
+        if cache_key in self.question_cache:
+            cache_entry = self.question_cache[cache_key]
+            if self._is_cache_valid(cache_entry):
+                print(f"[CACHE] Using cached question for key: {cache_key[:8]}")
+                return cache_entry['question']
+            else:
+                # Remove expired cache
+                del self.question_cache[cache_key]
+        return None
+
+    def _cache_question(self, plan_item: Dict[str, Any], jd_text: str, resume_summary: Dict[str, Any], question: str):
+        """Cache a question."""
+        import time
+        cache_key = self._get_question_cache_key(plan_item, jd_text, resume_summary)
+        self.question_cache[cache_key] = {
+            'question': question,
+            'timestamp': time.time()
+        }
+        print(f"[CACHE] Cached question for key: {cache_key[:8]}")
+
     # ------------------------------------------------------------------
     # INTERVIEW PLAN
     # ------------------------------------------------------------------
@@ -606,6 +674,18 @@ class LLMService:
             - difficulty: basic | medium | advanced
             - focus: short description of what to assess
         """
+        # Check cache first
+        cached_plan = self._get_cached_plan(jd_text, resume_parsed)
+        if cached_plan:
+            return cached_plan
+
+        # Check if we should skip API call due to quota issues
+        if self.consecutive_quota_errors >= 2:
+            print(f"[PLAN GEN] Skipping API call due to {self.consecutive_quota_errors} consecutive quota errors, using fallback")
+            plan = self._get_fallback_plan(jd_skills, resume_parsed)
+            self._cache_plan(jd_text, resume_parsed, plan)  # Cache the fallback too
+            return plan
+
         prompt = f"""You are a senior professional interviewer and hiring manager.
 Your job is to design a STRUCTURED INTERVIEW PLAN (not the actual questions)
 for a candidate based on the Job Description and their Resume.
@@ -754,8 +834,12 @@ Ensure the JSON is valid and parseable."""
             # If plan is too HR-heavy, use fallback instead
             if type_counts["technical"] < 3 or (type_counts["hr"] + type_counts["behavioral"]) > 7:
                 print("[LLMService] WARNING: Plan too HR-heavy, using fallback plan")
-                return self._get_fallback_plan(jd_skills, resume_parsed)
-            
+                plan = self._get_fallback_plan(jd_skills, resume_parsed)
+                self._cache_plan(jd_text, resume_parsed, plan)
+                return plan
+
+            # Cache successful plan
+            self._cache_plan(jd_text, resume_parsed, plan)
             return plan
         except Exception as e:
             print(f"Error generating interview plan: {e}")
@@ -904,10 +988,22 @@ Ensure the JSON is valid and parseable."""
         previous_context: Optional[str] = None,
     ) -> str:
         """Generate the actual question text based on a plan item."""
-        
+
+        # Check cache first
+        cached_question = self._get_cached_question(plan_item, jd_text, resume_summary)
+        if cached_question:
+            return cached_question
+
+        # Check if we should skip API call due to quota issues
+        if self.consecutive_quota_errors >= 2:
+            print(f"[QUESTION GEN] Skipping API call due to {self.consecutive_quota_errors} consecutive quota errors, using fallback")
+            question = self._get_fallback_question(plan_item, jd_text, resume_summary)
+            self._cache_question(plan_item, jd_text, resume_summary, question)  # Cache the fallback too
+            return question
+
         question_type = plan_item['type']
         skill = plan_item.get('skill', 'General')
-        
+
         print(f"[QUESTION GEN] Q#{question_index}, Type: {question_type}, Skill: {skill}")
         
         # CRITICAL: Use type-specific prompts to FORCE correct question generation
@@ -1035,8 +1131,8 @@ Return ONLY the question text."""
 
         try:
             # Implement retry logic for rate limits
-            max_retries = 3
-            retry_delay = 5  # Start with 5 seconds
+            max_retries = 2  # Reduced from 3
+            retry_delay = 2  # Reduced from 5 seconds
 
             for attempt in range(max_retries):
                 try:
@@ -1052,6 +1148,7 @@ Return ONLY the question text."""
 
                     print(f"[QUESTION GEN] Generated ({len(question)} chars): {question[:80]}...")
                     self._record_success()
+                    self._cache_question(plan_item, jd_text, resume_summary, question)
                     return question
 
                 except Exception as e:
@@ -1061,7 +1158,7 @@ Return ONLY the question text."""
                         if attempt < max_retries - 1:
                             print(f"[QUESTION GEN] Rate limit hit, retrying in {retry_delay}s (attempt {attempt + 1}/{max_retries})")
                             await asyncio.sleep(retry_delay)
-                            retry_delay *= 2  # Exponential backoff
+                            retry_delay = min(retry_delay * 1.5, 8)  # Gentler backoff, max 8 seconds
                             continue
                         else:
                             print(f"[QUESTION GEN] Rate limit persisted after {max_retries} attempts, using fallback")
@@ -1072,11 +1169,15 @@ Return ONLY the question text."""
                         break
 
             # If we get here, all retries failed or non-retryable error
-            return self._get_fallback_question(plan_item, jd_text, resume_summary)
+            question = self._get_fallback_question(plan_item, jd_text, resume_summary)
+            self._cache_question(plan_item, jd_text, resume_summary, question)
+            return question
 
         except Exception as e:
             print(f"[QUESTION GEN] Unexpected error: {e}, using fallback")
-            return self._get_fallback_question(plan_item, jd_text, resume_summary)
+            question = self._get_fallback_question(plan_item, jd_text, resume_summary)
+            self._cache_question(plan_item, jd_text, resume_summary, question)
+            return question
 
     def _get_fallback_question(self, plan_item: Dict[str, Any], jd_text: str = "", resume_summary: Dict[str, Any] = None) -> str:
         """Fallback question if LLM fails. Now personalized based on JD and resume."""
@@ -1331,11 +1432,37 @@ Return ONLY valid JSON:
             "recommendation": "Switch to fallback mode" if is_quota_exhausted else "Normal operation"
         }
 
-    def reset_quota_tracking(self):
-        """Reset quota tracking (useful for testing or new billing period)."""
-        self.quota_errors = 0
-        self.consecutive_quota_errors = 0
-        self.last_quota_error = None
+    def clear_cache(self):
+        """Clear all caches."""
+        self.plan_cache.clear()
+        self.question_cache.clear()
+        print("[CACHE] All caches cleared")
+
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Get cache statistics."""
+        import time
+        current_time = time.time()
+        
+        plan_cache_size = len(self.plan_cache)
+        question_cache_size = len(self.question_cache)
+        
+        # Count valid entries
+        valid_plans = sum(1 for entry in self.plan_cache.values() if self._is_cache_valid(entry))
+        valid_questions = sum(1 for entry in self.question_cache.values() if self._is_cache_valid(entry))
+        
+        return {
+            "plan_cache": {
+                "total_entries": plan_cache_size,
+                "valid_entries": valid_plans,
+                "hit_rate_estimate": f"{valid_plans}/{plan_cache_size}" if plan_cache_size > 0 else "0/0"
+            },
+            "question_cache": {
+                "total_entries": question_cache_size,
+                "valid_entries": valid_questions,
+                "hit_rate_estimate": f"{valid_questions}/{question_cache_size}" if question_cache_size > 0 else "0/0"
+            },
+            "cache_expiry_seconds": self.cache_expiry
+        }
 
 
 # Singleton instance
