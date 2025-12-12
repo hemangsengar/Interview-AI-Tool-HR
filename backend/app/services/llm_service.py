@@ -539,6 +539,11 @@ class LLMService:
         - Prefer newer/better models if available
         - Fall back safely to gemini-pro
         """
+        # Quota tracking
+        self.quota_errors = 0
+        self.last_quota_error = None
+        self.consecutive_quota_errors = 0
+
         try:
             models = list(genai.list_models())
             available_models: List[str] = []
@@ -890,7 +895,7 @@ Ensure the JSON is valid and parseable."""
     # ------------------------------------------------------------------
     # QUESTION GENERATION
     # ------------------------------------------------------------------
-    def generate_next_question(
+    async def generate_next_question(
         self,
         plan_item: Dict[str, Any],
         jd_text: str,
@@ -1029,40 +1034,93 @@ Focus: {plan_item['focus']}
 Return ONLY the question text."""
 
         try:
-            response = self.model.generate_content(prompt)
-            question = response.text.strip().strip('"').strip("'")
-            
-            # Enforce 400 character limit for TTS API (500 char limit with buffer)
-            if len(question) > 400:
-                print(f"[QUESTION GEN] Question too long ({len(question)} chars), truncating...")
-                question = question[:397] + "..."
-            
-            print(f"[QUESTION GEN] Generated ({len(question)} chars): {question[:80]}...")
-            return question
-        except Exception as e:
-            print(f"[QUESTION GEN] Error: {e}, using fallback")
-            return self._get_fallback_question(plan_item)
+            # Implement retry logic for rate limits
+            max_retries = 3
+            retry_delay = 5  # Start with 5 seconds
 
-    def _get_fallback_question(self, plan_item: Dict[str, Any]) -> str:
-        """Fallback question if LLM fails."""
-        if plan_item["type"] == "introduction":
+            for attempt in range(max_retries):
+                try:
+                    # Use asyncio.to_thread for async LLM call
+                    import asyncio
+                    response = await asyncio.to_thread(self.model.generate_content, prompt)
+                    question = response.text.strip().strip('"').strip("'")
+
+                    # Enforce 400 character limit for TTS API (500 char limit with buffer)
+                    if len(question) > 400:
+                        print(f"[QUESTION GEN] Question too long ({len(question)} chars), truncating...")
+                        question = question[:397] + "..."
+
+                    print(f"[QUESTION GEN] Generated ({len(question)} chars): {question[:80]}...")
+                    self._record_success()
+                    return question
+
+                except Exception as e:
+                    error_msg = str(e).lower()
+                    if "quota" in error_msg or "rate limit" in error_msg:
+                        self._record_quota_error()
+                        if attempt < max_retries - 1:
+                            print(f"[QUESTION GEN] Rate limit hit, retrying in {retry_delay}s (attempt {attempt + 1}/{max_retries})")
+                            await asyncio.sleep(retry_delay)
+                            retry_delay *= 2  # Exponential backoff
+                            continue
+                        else:
+                            print(f"[QUESTION GEN] Rate limit persisted after {max_retries} attempts, using fallback")
+                            break
+                    else:
+                        # Non-rate-limit error, don't retry
+                        print(f"[QUESTION GEN] Non-rate-limit error: {e}, using fallback")
+                        break
+
+            # If we get here, all retries failed or non-retryable error
+            return self._get_fallback_question(plan_item, jd_text, resume_summary)
+
+        except Exception as e:
+            print(f"[QUESTION GEN] Unexpected error: {e}, using fallback")
+            return self._get_fallback_question(plan_item, jd_text, resume_summary)
+
+    def _get_fallback_question(self, plan_item: Dict[str, Any], jd_text: str = "", resume_summary: Dict[str, Any] = None) -> str:
+        """Fallback question if LLM fails. Now personalized based on JD and resume."""
+        question_type = plan_item.get("type", "technical")
+        skill = plan_item.get("skill")
+        difficulty = plan_item.get("difficulty", "medium")
+
+        # Extract relevant info from JD and resume
+        jd_skills = []
+        if jd_text:
+            # Simple extraction of potential skills from JD
+            jd_lower = jd_text.lower()
+            common_skills = ["python", "javascript", "java", "react", "node", "sql", "aws", "docker", "kubernetes", "git"]
+            jd_skills = [s for s in common_skills if s in jd_lower]
+
+        resume_skills = resume_summary.get("skills", []) if resume_summary else []
+
+        if question_type == "introduction":
             return "Please tell me about yourself, your background, and what brings you to this opportunity today."
-        elif plan_item["type"] == "technical":
-            skill = plan_item.get("skill", "this technology")
-            return (
-                f"Can you explain your experience with {skill} and describe a challenging "
-                f"problem you solved using it?"
-            )
-        elif plan_item["type"] == "project":
-            return (
-                "Tell me about a project you're most proud of. "
-                "What was your role and what challenges did you face?"
-            )
-        else:
-            return (
-                "Describe a situation where you had to work with a difficult team member. "
-                "How did you handle it, and what was the outcome?"
-            )
+
+        elif question_type == "technical":
+            # Use skill from plan or extract from JD/resume
+            target_skill = skill or jd_skills[0] if jd_skills else resume_skills[0] if resume_skills else "programming"
+
+            if difficulty == "basic":
+                return f"Can you explain what {target_skill} is and why it's useful in software development?"
+            elif difficulty == "advanced":
+                return f"Can you describe a complex problem you solved using {target_skill} and the technical challenges you faced?"
+            else:  # medium
+                return f"Can you walk me through how you've used {target_skill} in your projects and what you find most challenging about it?"
+
+        elif question_type == "project":
+            # Personalize based on resume experience
+            experience_years = resume_summary.get("experience_years", 0) if resume_summary else 0
+
+            if experience_years > 3:
+                return "Can you describe a significant project you led and the key technical decisions you made?"
+            else:
+                return "Tell me about a project you're most proud of. What was your role and what did you learn from it?"
+
+        elif question_type == "behavioral":
+            return "Describe a situation where you had to work with a team to solve a challenging problem. What was your role and what was the outcome?"
+        else:  # hr or unknown
+            return "What interests you most about this role and our company, and why do you think you'd be a good fit?"
 
     # ------------------------------------------------------------------
     # ANSWER EVALUATION
@@ -1248,6 +1306,36 @@ Return ONLY valid JSON:
             return "Weak"
         else:
             return "Reject"
+
+    def _record_quota_error(self):
+        """Record a quota/rate limit error."""
+        import datetime
+        self.quota_errors += 1
+        self.last_quota_error = datetime.datetime.utcnow()
+        self.consecutive_quota_errors += 1
+
+    def _record_success(self):
+        """Record a successful API call."""
+        self.consecutive_quota_errors = 0
+
+    def get_quota_status(self) -> Dict[str, Any]:
+        """Get current quota status."""
+        import datetime
+        is_quota_exhausted = self.consecutive_quota_errors >= 3
+
+        return {
+            "quota_errors_today": self.quota_errors,
+            "consecutive_quota_errors": self.consecutive_quota_errors,
+            "last_quota_error": self.last_quota_error.isoformat() if self.last_quota_error else None,
+            "is_quota_exhausted": is_quota_exhausted,
+            "recommendation": "Switch to fallback mode" if is_quota_exhausted else "Normal operation"
+        }
+
+    def reset_quota_tracking(self):
+        """Reset quota tracking (useful for testing or new billing period)."""
+        self.quota_errors = 0
+        self.consecutive_quota_errors = 0
+        self.last_quota_error = None
 
 
 # Singleton instance

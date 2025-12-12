@@ -237,7 +237,7 @@ async def get_next_question(
     if previous_questions_text:
         previous_questions_context = f"\n\nPREVIOUSLY ASKED QUESTIONS (DO NOT REPEAT OR ASK SIMILAR):\n" + "\n".join([f"- {q}" for q in previous_questions_text])
     
-    question_text = llm_service.generate_next_question(
+    question_text = await llm_service.generate_next_question(
         plan_item,
         job.jd_raw_text,
         resume_parsed,
@@ -251,7 +251,7 @@ async def get_next_question(
     while attempt < max_attempts:
         # Check exact match
         if question_text in previous_questions_text:
-            question_text = llm_service.generate_next_question(
+            question_text = await llm_service.generate_next_question(
                 plan_item,
                 job.jd_raw_text,
                 resume_parsed,
@@ -272,7 +272,7 @@ async def get_next_question(
                     break
             
             if is_similar:
-                question_text = llm_service.generate_next_question(
+                question_text = await llm_service.generate_next_question(
                     plan_item,
                     job.jd_raw_text,
                     resume_parsed,
