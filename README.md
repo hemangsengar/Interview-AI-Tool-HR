@@ -1,79 +1,49 @@
-# 🎤 AI Interview Platform
+# 🎤 Avatar Voice Interviewer
 
-An AI-powered interview system with animated avatars that conducts voice-based interviews using TTS and STT.
+An AI-powered interview system with an animated avatar that conducts voice interviews.
+
+## ✅ FIXED AND WORKING!
+
+**Backend**: http://localhost:8000 ✅  
+**Frontend**: http://localhost:5173 ✅  
+**API Docs**: http://localhost:8000/docs ✅
+
+**All bcrypt errors fixed! Beautiful new design! Ready to use!**
 
 ## 🚀 Quick Start
 
-**New to the project?** See the [Quick Start Guide](./docs/setup/QUICK_START.md)
+### First Time Setup:
+1. Your API keys are already set in `backend/.env`
+2. Both servers are running
+3. Just open: **http://localhost:5173**
 
-### Local Development
-```bash
-# Backend
-cd backend
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-python run.py
-
-# Frontend
-cd frontend
-npm install
-npm run dev
-```
-
-**Access:**
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
-
-## 📚 Documentation
-
-All documentation is now organized in the [`docs/`](./docs) folder:
-
-### 📖 Essential Guides
-- **[Documentation Index](./docs/README.md)** - Start here!
-- **[Quick Start](./docs/setup/QUICK_START.md)** - Get running in 10 minutes
-- **[Deployment Guide](./docs/deployment/DEPLOYMENT_GUIDE.md)** - Deploy to Render + Vercel
-- **[Troubleshooting](./docs/troubleshooting/)** - Fix common issues
-
-### 📁 Documentation Structure
-```
-docs/
-├── README.md                    # Main documentation index
-├── setup/                       # Installation & configuration
-│   ├── QUICK_START.md
-│   ├── LOCAL_SETUP_GUIDE.md
-│   ├── BUILD_FROM_SCRATCH_GUIDE.md
-│   └── ...
-├── deployment/                  # Deployment guides
-│   ├── DEPLOYMENT_GUIDE.md
-│   ├── DEPLOYMENT_CHECKLIST.md
-│   └── ...
-├── features/                    # Feature documentation
-│   ├── AVATAR_GUIDE.md
-│   ├── RATE_LIMITING_GUIDE.md
-│   └── ...
-├── troubleshooting/             # Common issues & fixes
-│   ├── AUDIO_FILE_404_FIX.md
-│   ├── CORS_FIX.md
-│   └── ...
-└── archived/                    # Old/deprecated docs
-```
+### To Start Again Later:
+Double-click `START_HERE.bat`
 
 ## 🎯 How to Use
 
 ### As HR (Create Jobs & View Results):
-1. Go to frontend URL
+1. Go to http://localhost:5173
 2. Click "HR Portal"
-3. Sign up with email/password
-4. Create a job posting
-5. View candidates and interview results
+3. Sign up with any email/password
+4. Click "+ Create Job"
+5. Fill in job details and skills
+6. View candidates and their interview results
 
-### As Candidate (Take Interview):
-1. Go to frontend URL
+### As Candidate (Do Interview):
+1. Open incognito window: http://localhost:5173
 2. Click "Join Interview"
-3. Enter job code and details
-4. Upload resume
-5. Complete AI voice interview
-6. Wait for results
+3. Enter your details
+4. Upload resume or paste text
+5. Click "Start Interview"
+6. Allow microphone access
+7. Answer the avatar's questions by voice
+
+### View Results:
+1. Go back to HR window
+2. Click on your job
+3. See all candidates
+4. Click "View Details" for full transcript and scores
 
 ## 📁 Project Structure
 
@@ -108,11 +78,20 @@ docs/
 
 Close the command prompt windows or press Ctrl+C
 
-## 📚 More Help
+## 📚 Documentation
 
-- **VISUAL_GUIDE.md** - Step-by-step with pictures
-- **WHAT_IS_WHAT.md** - What each file does
-- **START_HERE_README.md** - Detailed documentation
+Complete documentation is available in the [`docs/`](docs/) folder:
+
+- **[Setup Guides](docs/setup/)** - Installation, local setup, database access
+- **[Features](docs/features/)** - Rate limiting, avatars, and all features
+- **[Troubleshooting](docs/troubleshooting/)** - Solutions to common problems
+- **[Deployment](docs/deployment/)** - Deploy to Render + Vercel
+
+**Quick Links:**
+- [📖 Documentation Index](docs/README.md) - Start here
+- [🚀 Local Setup Guide](docs/setup/LOCAL_SETUP_GUIDE.md) - Detailed setup instructions
+- [🎯 Feature Guide](docs/features/FEATURE_GUIDE.md) - All features explained
+- [🔧 Troubleshooting](docs/troubleshooting/README.md) - Fix common issues
 
 ## 🎉 That's It!
 

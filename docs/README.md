@@ -1,68 +1,56 @@
 # 📚 Documentation Index
 
-Welcome to the AI Interview Platform documentation! All guides are organized by category.
+Welcome to the AI Interview Platform documentation!
 
-## 🚀 Quick Start
+## 📖 Quick Links
 
-**New to the project?** Start here:
-- [Quick Start Guide](./setup/QUICK_START.md) - Get up and running in 10 minutes
-- [Project Overview](./setup/PROJECT_SUMMARY.md) - Understand the architecture
+### 🚀 Getting Started
+- [Local Setup Guide](setup/LOCAL_SETUP_GUIDE.md) - Set up the project on your machine
+- [Build from Scratch](setup/BUILD_FROM_SCRATCH_GUIDE.md) - Complete guide for beginners
+- [Quick Start](setup/QUICK_START.md) - Get running in 5 minutes
 
-## 📁 Documentation Structure
+### 🎯 Features
+- [Rate Limiting Guide](features/RATE_LIMITING_GUIDE.md) - API protection for free tier
+- [Avatar Guide](features/AVATAR_GUIDE.md) - Understanding the AI interviewer avatars
+- [Feature Guide](features/FEATURE_GUIDE.md) - All platform features explained
 
-### 1. Setup & Installation
-- [Local Setup Guide](./setup/LOCAL_SETUP_GUIDE.md) - Development environment setup
-- [Build From Scratch](./setup/BUILD_FROM_SCRATCH_GUIDE.md) - Complete setup walkthrough
-- [Database Setup](./setup/DATABASE_SETUP.md) - PostgreSQL configuration
-- [View Database Guide](./setup/VIEW_DATABASE_GUIDE.md) - Database inspection tools
+### 🔧 Troubleshooting
+- [Audio Issues](troubleshooting/AUDIO_FILE_404_FIX.md) - Fix audio 404 errors
+- [CORS Issues](troubleshooting/CORS_FIX.md) - Cross-origin problems
+- [401 Authentication](troubleshooting/FINAL_FIX_401.md) - Login issues
 
-### 2. Deployment
-- [Deployment Guide](./deployment/DEPLOYMENT_GUIDE.md) - Complete deployment walkthrough
-- [Render Setup](./deployment/RENDER_SETUP.md) - Backend deployment on Render
-- [Vercel Setup](./deployment/VERCEL_SETUP.md) - Frontend deployment on Vercel
-- [Deployment Checklist](./deployment/DEPLOYMENT_CHECKLIST.md) - Pre-deployment checklist
-- [Production Ready](./deployment/PRODUCTION_READY.md) - Production considerations
+### 🚢 Deployment
+- [Deployment Guide](deployment/DEPLOYMENT_GUIDE.md) - Deploy to Render + Vercel
+- [Production Checklist](deployment/PRODUCTION_READY.md) - Pre-launch checklist
+- [Environment Variables](deployment/RENDER_ENV_VARS.txt) - Required env vars
 
-### 3. Features & Usage
-- [Feature Guide](./features/FEATURE_GUIDE.md) - All platform features explained
-- [Avatar Guide](./features/AVATAR_GUIDE.md) - Video avatar customization
-- [Rate Limiting](./features/RATE_LIMITING.md) - API protection & limits
-- [Video Storage](./features/VIDEO_STORAGE_GUIDE.md) - Recording & storage
+### 🗄️ Database
+- [View Database Guide](setup/VIEW_DATABASE_GUIDE.md) - Access and query data
+- [PostgreSQL Setup](setup/RENDER_POSTGRESQL_SETUP.md) - Render database setup
 
-### 4. Troubleshooting
-- [Audio Issues](./troubleshooting/AUDIO_ISSUES.md) - Audio 404, double slash, chunking fixes
-- [CORS Issues](./troubleshooting/CORS_FIX.md) - Cross-origin request errors
-- [Authentication Issues](./troubleshooting/AUTH_ISSUES.md) - Login/token problems
-- [Deployment Issues](./troubleshooting/DEPLOYMENT_ISSUES.md) - Common deployment errors
+## 📂 Documentation Structure
 
-### 5. Security
-- [Security Guide](./setup/SECURITY_GUIDE.md) - Best practices & considerations
-- [Rate Limiting](./features/RATE_LIMITING.md) - API abuse prevention
+```
+docs/
+├── setup/              # Installation and setup guides
+├── features/           # Feature documentation
+├── troubleshooting/    # Problem solving guides
+├── deployment/         # Deployment guides
+├── archived/           # Old/deprecated docs
+└── api/                # API documentation (future)
+```
 
-## 🔍 Find What You Need
+## 🆘 Need Help?
 
-### I want to...
-- **Set up locally** → [Local Setup Guide](./setup/LOCAL_SETUP_GUIDE.md)
-- **Deploy to production** → [Deployment Guide](./deployment/DEPLOYMENT_GUIDE.md)
-- **Fix audio 404 errors** → [Audio Issues](./troubleshooting/AUDIO_ISSUES.md)
-- **Add rate limiting** → [Rate Limiting Guide](./features/RATE_LIMITING.md)
-- **Customize avatars** → [Avatar Guide](./features/AVATAR_GUIDE.md)
-- **Understand the code** → [Project Summary](./setup/PROJECT_SUMMARY.md)
+1. Check the relevant section above
+2. Search the troubleshooting folder
+3. Check GitHub Issues
+4. Read the main [README.md](../README.md)
 
-## 📞 Support
+## 🤝 Contributing
 
-If you're stuck:
-1. Check the relevant troubleshooting guide
-2. Review the error logs (Render/Vercel dashboards)
-3. Search issues in the GitHub repository
-
-## 🎯 Latest Updates
-
-- ✅ Audio file 404 fix (persistent disk + relative paths)
-- ✅ Rate limiting implementation
-- ✅ Double slash URL fix
-- ✅ PostgreSQL migration guide
-
----
-
-**Note:** All old/duplicate documentation has been archived in `archived/` folder.
+When adding new documentation:
+- Place it in the appropriate folder
+- Update this index
+- Use clear, beginner-friendly language
+- Include code examples
