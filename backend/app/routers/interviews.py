@@ -77,9 +77,9 @@ async def start_interview(
     db: Session = Depends(get_db)
 ):
     """Start an interview session and generate interview plan."""
-    # Rate limit: 3 interview starts per day per IP
+    # Rate limit: 50 interview starts per hour (more relaxed for testing)
     client_ip = http_request.client.host if http_request.client else "unknown"
-    rate_limiter.check_rate_limit(client_ip, max_requests=3, window_seconds=86400)
+    rate_limiter.check_rate_limit(client_ip, max_requests=50, window_seconds=3600)
     
     # Get speaker preference
     speaker = request.speaker
