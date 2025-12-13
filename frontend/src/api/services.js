@@ -35,6 +35,18 @@ export const interviewService = {
     return apiClient.post(`/api/interviews/${sessionId}/start`, { speaker })
   },
   getNextQuestion: (sessionId) => apiClient.post(`/api/interviews/${sessionId}/next-question`),
+  
+  // NEW: Optimized single-call conversation endpoint
+  // Returns: spoken_response, audio_base64, scores, answer_quality, next_action, is_interview_complete
+  submitConversation: (sessionId, audioBlob) => {
+    const formData = new FormData()
+    formData.append('audio_file', audioBlob, 'answer.wav')
+    return apiClient.post(`/api/interviews/${sessionId}/conversation`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+  
+  // Legacy endpoint (still works, but slower)
   submitAnswer: (sessionId, audioBlob) => {
     const formData = new FormData()
     formData.append('audio_file', audioBlob, 'answer.wav')

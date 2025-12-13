@@ -753,22 +753,177 @@ const InterviewRoom = () => {
   const submitAnswer = async (audioBlob) => {
     try {
       setAvatarState('thinking')
-      setStatus('Evaluating your answer...')
+      setStatus('Processing your response...')
       setSubtitle('')
       setShowCodeEditor(false)
       
-      const response = await interviewService.submitAnswer(sessionId, audioBlob)
-      const evaluation = response.data
+      // Use NEW optimized conversation endpoint - single LLM call
+      const response = await interviewService.submitConversation(sessionId, audioBlob)
+      const result = response.data
       
-      if (evaluation.is_interview_complete) {
-        handleInterviewComplete()
+      console.log('[Interview] Conversation response:', {
+        quality: result.answer_quality,
+        nextAction: result.next_action,
+        question: `${result.question_number}/${result.total_questions}`
+      })
+      
+      // Play interviewer's natural response
+      if (result.spoken_response) {
+        setSubtitle(result.spoken_response)
+        setAvatarState('speaking')
+        
+        // Play audio if available (from Sarvam TTS)
+        if (result.audio_base64) {
+          try {
+            const audioData = atob(result.audio_base64)
+            const audioArray = new Uint8Array(audioData.length)
+            for (let i = 0; i < audioData.length; i++) {
+              audioArray[i] = audioData.charCodeAt(i)
+            }
+            const audioBlob = new Blob([audioArray], { type: 'audio/wav' })
+            const audioUrl = URL.createObjectURL(audioBlob)
+            
+            audioRef.current.src = audioUrl
+            audioRef.current.onended = async () => {
+              URL.revokeObjectURL(audioUrl)
+              await handleNextAction(result)
+            }
+            await audioRef.current.play()
+          } catch (audioErr) {
+            console.warn('[Interview] Audio playback failed, using browser TTS:', audioErr)
+            await speakWithBrowserTTS(result.spoken_response)
+            await handleNextAction(result)
+          }
+        } else {
+          // Fallback to browser TTS
+          await speakWithBrowserTTS(result.spoken_response)
+          await handleNextAction(result)
+        }
       } else {
-        await getNextQuestion()
+        await handleNextAction(result)
       }
     } catch (err) {
-      setError('Failed to submit answer')
+      console.error('[Interview] Submit error:', err)
+      // Fallback to legacy endpoint if conversation fails
+      try {
+        console.log('[Interview] Falling back to legacy /answers endpoint')
+        const response = await interviewService.submitAnswer(sessionId, audioBlob)
+        const evaluation = response.data
+        
+        if (evaluation.is_interview_complete) {
+          handleInterviewComplete()
+        } else {
+          await getNextQuestion()
+        }
+      } catch (fallbackErr) {
+        setError('Failed to submit answer. Please try again.')
+        setAvatarState('idle')
+        setStatus('Error - Please try again')
+      }
+    }
+  }
+
+  // Handle what happens after interviewer response
+  const handleNextAction = async (result) => {
+    if (result.is_interview_complete) {
+      handleInterviewComplete()
+    } else if (result.next_action === 'follow_up' && result.follow_up_question) {
+      // Ask follow-up question directly (no need to fetch from server)
+      setCurrentQuestion({ text: result.follow_up_question })
+      await speakQuestion(result.follow_up_question)
+    } else if (result.next_question_text) {
+      // NEW: Use next question from conversation response (no extra API call!)
+      console.log('[Interview] Using next question from conversation response')
+      setCurrentQuestion({ text: result.next_question_text })
+      setSubtitle(result.next_question_text)
+      
+      // Play the next question audio if available
+      if (result.next_question_audio_base64) {
+        try {
+          const audioData = atob(result.next_question_audio_base64)
+          const audioArray = new Uint8Array(audioData.length)
+          for (let i = 0; i < audioData.length; i++) {
+            audioArray[i] = audioData.charCodeAt(i)
+          }
+          const audioBlob = new Blob([audioArray], { type: 'audio/wav' })
+          const audioUrl = URL.createObjectURL(audioBlob)
+          
+          audioRef.current.src = audioUrl
+          audioRef.current.onended = () => {
+            URL.revokeObjectURL(audioUrl)
+            setAvatarState('listening')
+            setStatus('Ready for your answer')
+          }
+          setAvatarState('speaking')
+          setStatus('Speaking...')
+          await audioRef.current.play()
+        } catch (audioErr) {
+          console.warn('[Interview] Next question audio failed, using browser TTS:', audioErr)
+          await speakQuestion(result.next_question_text)
+        }
+      } else {
+        await speakQuestion(result.next_question_text)
+      }
+    } else {
+      // Fallback: Continue to next planned question (legacy flow)
+      await getNextQuestion()
+    }
+  }
+
+  // Browser TTS fallback
+  const speakWithBrowserTTS = (text) => {
+    return new Promise((resolve) => {
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text)
+        utterance.rate = 1.0
+        utterance.pitch = 1.0
+        utterance.onend = resolve
+        utterance.onerror = resolve
+        speechSynthesis.speak(utterance)
+      } else {
+        // No TTS available, just wait briefly
+        setTimeout(resolve, 1500)
+      }
+    })
+  }
+
+  // Speak a follow-up question using Sarvam TTS
+  const speakQuestion = async (questionText) => {
+    try {
+      setSubtitle(questionText)
+      setAvatarState('speaking')
+      setStatus('Speaking...')
+      
+      // Use Sarvam TTS with selected voice
+      const speaker = selectedInterviewer === 'aarushi' ? 'anushka' : 'abhilash'
+      const audioResponse = await interviewService.generateGreetingAudio(questionText, speaker)
+      const audioBlob = new Blob([audioResponse.data], { type: 'audio/wav' })
+      const audioUrl = URL.createObjectURL(audioBlob)
+      
+      return new Promise((resolve) => {
+        const audio = new Audio(audioUrl)
+        audio.onended = () => {
+          URL.revokeObjectURL(audioUrl)
+          setAvatarState('idle')
+          setStatus('Your turn to answer')
+          resolve()
+        }
+        audio.onerror = () => {
+          URL.revokeObjectURL(audioUrl)
+          setAvatarState('idle')
+          setStatus('Your turn to answer')
+          resolve()
+        }
+        audio.play().catch(() => {
+          // Fallback to browser TTS
+          speakWithBrowserTTS(questionText).then(resolve)
+        })
+      })
+    } catch (err) {
+      console.warn('[Interview] Sarvam TTS failed, using browser TTS:', err)
+      await speakWithBrowserTTS(questionText)
       setAvatarState('idle')
-      setStatus('Error - Please try again')
+      setStatus('Your turn to answer')
     }
   }
 

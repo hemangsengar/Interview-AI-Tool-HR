@@ -650,6 +650,259 @@ async def submit_answer(
     )
 
 
+class ConversationResponse(BaseModel):
+    """Optimized single-call conversation response."""
+    spoken_response: str
+    audio_base64: Optional[str] = None
+    scores: dict
+    answer_quality: str
+    next_action: str
+    is_interview_complete: bool
+    question_number: int
+    total_questions: int
+    # Follow-up question if LLM decided to ask one
+    follow_up_question: Optional[str] = None
+    # NEW: Include next question in response so frontend doesn't need separate call
+    next_question_text: Optional[str] = None
+    next_question_audio_base64: Optional[str] = None
+
+
+@router.post("/{session_id}/conversation", response_model=ConversationResponse)
+async def process_conversation(
+    session_id: int,
+    audio_file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """
+    OPTIMIZED: Single endpoint for complete conversation flow.
+    
+    1. Receives audio answer
+    2. Transcribes (Sarvam STT)
+    3. Single LLM call: evaluates + generates natural response
+    4. Generates audio (Sarvam TTS)
+    5. Returns everything in one response
+    
+    Target: 6-8 seconds total latency vs 12-15s with multiple calls.
+    """
+    import base64
+    
+    session = db.query(InterviewSession).filter(
+        InterviewSession.id == session_id
+    ).first()
+    
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interview session not found"
+        )
+    
+    # Get the latest question without an answer
+    question = db.query(InterviewQuestion).filter(
+        InterviewQuestion.session_id == session_id,
+        ~InterviewQuestion.answer.has()
+    ).order_by(InterviewQuestion.index.desc()).first()
+    
+    if not question:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No pending question found"
+        )
+    
+    candidate = session.candidate
+    job = candidate.job
+    metadata = session.session_metadata or {}
+    interview_plan = metadata.get("interview_plan", [])
+    
+    # Step 1: Save audio file
+    audio_bytes = await audio_file.read()
+    
+    safe_name = "".join(c for c in candidate.name if c.isalnum() or c in (' ', '_')).strip()
+    safe_name = safe_name.replace(' ', '_')
+    
+    candidate_folder = Path(settings.UPLOAD_DIR) / safe_name
+    candidate_folder.mkdir(parents=True, exist_ok=True)
+    
+    audio_filename = f"q{question.index:02d}_answer.wav"
+    audio_path = candidate_folder / audio_filename
+    
+    with open(audio_path, "wb") as f:
+        f.write(audio_bytes)
+    
+    relative_audio_path = f"{safe_name}/{audio_filename}"
+    
+    # Step 2: Transcribe audio (Sarvam STT)
+    transcript = await speech_service.transcribe_audio(audio_bytes)
+    if not transcript:
+        transcript = "[Could not understand audio - please try again]"
+    
+    print(f"[CONVERSATION] Question {question.index}: '{question.question_text[:50]}...'")
+    print(f"[CONVERSATION] Answer transcript: '{transcript[:100]}...'")
+    
+    # Step 2.5: Build interview history (ALL previous Q&A pairs for context)
+    previous_questions = db.query(InterviewQuestion).filter(
+        InterviewQuestion.session_id == session_id,
+        InterviewQuestion.answer.has()  # Only questions that have been answered
+    ).order_by(InterviewQuestion.index.asc()).all()
+    
+    interview_history = []
+    for prev_q in previous_questions:
+        interview_history.append({
+            "question": prev_q.question_text,
+            "answer": prev_q.answer.answer_transcript_text if prev_q.answer else "",
+            "skill": prev_q.skill,
+            "type": prev_q.question_type or "technical"
+        })
+    
+    print(f"[CONVERSATION] Interview history: {len(interview_history)} previous Q&A pairs")
+    
+    # Step 2.6: Get skills the candidate said they don't know
+    skills_unknown = metadata.get("skills_unknown", [])
+    
+    # Step 3: SINGLE LLM CALL - evaluate + generate response
+    is_last_question = question.index >= len(interview_plan)
+    
+    # Get question type from stored data (introduction, technical, project, behavioral)
+    question_type = question.question_type or "technical"
+    print(f"[CONVERSATION] Question type: {question_type}, Skill: {question.skill}")
+    
+    llm_response = await llm_service.process_answer_and_respond(
+        answer_text=transcript,
+        question_text=question.question_text,
+        skill=question.skill,
+        jd_context=job.jd_raw_text,
+        interview_history=interview_history,
+        skills_unknown=skills_unknown,
+        question_type=question_type
+    )
+    
+    # Step 4: Save answer to database
+    answer = InterviewAnswer(
+        question_id=question.id,
+        answer_transcript_text=transcript,
+        audio_file_path=relative_audio_path,
+        correctness_score=llm_response["scores"]["correctness"],
+        depth_score=llm_response["scores"]["depth"],
+        clarity_score=llm_response["scores"]["clarity"],
+        relevance_score=llm_response["scores"]["relevance"],
+        comment_text=llm_response.get("internal_notes", "")
+    )
+    
+    db.add(answer)
+    
+    # Step 4.5: Track skills candidate doesn't know
+    skill_to_skip = llm_response.get("skill_to_skip")
+    if skill_to_skip:
+        if "skills_unknown" not in metadata:
+            metadata["skills_unknown"] = []
+        if skill_to_skip.lower() not in [s.lower() for s in metadata["skills_unknown"]]:
+            metadata["skills_unknown"].append(skill_to_skip)
+            print(f"[CONVERSATION] Added '{skill_to_skip}' to skills_unknown: {metadata['skills_unknown']}")
+    
+    # Update session metadata
+    metadata["current_question_index"] = question.index
+    session.session_metadata = metadata
+    
+    # Step 5: Generate TTS for spoken response (parallel-ready)
+    audio_base64 = None
+    try:
+        response_audio = await speech_service.synthesize_speech(
+            llm_response["spoken_response"],
+            speaker="abhilash"  # Male voice
+        )
+        if response_audio:
+            audio_base64 = base64.b64encode(response_audio).decode('utf-8')
+    except Exception as e:
+        print(f"[CONVERSATION] TTS failed: {e}")
+        # Continue without audio - frontend can use browser TTS as fallback
+    
+    # Initialize next question variables
+    next_question_text = None
+    next_question_audio_base64 = None
+    
+    # Step 6: If moving to next question, create it
+    is_complete = is_last_question
+    
+    if is_complete:
+        finalize_interview(session, db)
+    elif llm_response["next_action"] in ["continue", "end_topic", "answer_candidate"]:
+        # Generate next question from plan (skip if skill is in skills_unknown)
+        next_index = question.index + 1
+        skills_unknown = metadata.get("skills_unknown", [])
+        
+        # Find next plan item that's not in skills_unknown
+        while next_index <= len(interview_plan):
+            plan_item = interview_plan[next_index - 1]
+            plan_skill = plan_item.get("skill", "").lower()
+            
+            # Check if this skill should be skipped
+            skip_this = any(
+                plan_skill and unknown.lower() in plan_skill.lower()
+                for unknown in skills_unknown
+            )
+            
+            if skip_this:
+                print(f"[CONVERSATION] Skipping question about '{plan_skill}' - candidate doesn't know it")
+                next_index += 1
+                continue
+            else:
+                break
+        
+        if next_index <= len(interview_plan):
+            plan_item = interview_plan[next_index - 1]
+            
+            # Generate the actual question
+            try:
+                next_question = await llm_service.generate_next_question(
+                    candidate_resume=candidate.resume_parsed_json,
+                    job_description=job.jd_raw_text,
+                    interview_plan=interview_plan,
+                    current_question_index=next_index
+                )
+            except Exception as e:
+                print(f"[CONVERSATION] Question generation failed: {e}")
+                next_question_text = f"Can you tell me about your experience with {plan_item.get('skill', 'this topic')}?"
+            else:
+                next_question_text = next_question
+            
+            new_question = InterviewQuestion(
+                session_id=session_id,
+                question_text=next_question_text,
+                skill=plan_item.get("skill", "General"),
+                difficulty_level=plan_item.get("difficulty", "medium"),
+                index=next_index
+            )
+            db.add(new_question)
+            
+            # Generate TTS for next question too (so frontend has everything)
+            try:
+                speaker = metadata.get("speaker", "abhilash")
+                next_q_audio = await speech_service.synthesize_speech(next_question_text, speaker=speaker)
+                if next_q_audio:
+                    next_question_audio_base64 = base64.b64encode(next_q_audio).decode('utf-8')
+            except Exception as e:
+                print(f"[CONVERSATION] Next question TTS failed: {e}")
+        else:
+            # Reached end of plan
+            is_complete = True
+            finalize_interview(session, db)
+    
+    db.commit()
+    
+    return ConversationResponse(
+        spoken_response=llm_response["spoken_response"],
+        audio_base64=audio_base64,
+        scores=llm_response["scores"],
+        answer_quality=llm_response["answer_quality"],
+        next_action=llm_response["next_action"],
+        is_interview_complete=is_complete,
+        question_number=question.index,
+        total_questions=len(interview_plan),
+        follow_up_question=llm_response.get("follow_up_question"),
+        next_question_text=next_question_text,
+        next_question_audio_base64=next_question_audio_base64
+    )
+
+
 def finalize_interview(session: InterviewSession, db: Session):
     """Finalize interview and generate report."""
     # Get all questions and answers

@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     # Google Gemini
     GEMINI_API_KEY: str = ""
     
+    # Groq (Free fallback LLM - very fast)
+    GROQ_API_KEY: str = ""
+    
     # Sarvam AI
     SARVAM_API_KEY: str = ""
     SARVAM_STT_URL: str = "https://api.sarvam.ai/speech-to-text"

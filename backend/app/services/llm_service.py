@@ -526,29 +526,33 @@ genai.configure(api_key=settings.GEMINI_API_KEY)
 
 
 class LLMService:
-    """Service for all LLM-based operations."""
+    """Service for all LLM-based operations with multi-provider fallback."""
 
     def __init__(self):
         """
-        Initialize Gemini model with automatic model selection.
-
-        Instead of hardcoding a model (which can cause 404 errors if the
-        client / API version doesn't support it), we:
-        - List available models
-        - Filter those that support generateContent
-        - Prefer newer/better models if available
-        - Fall back safely to gemini-pro
+        Initialize LLM service with Gemini primary + Groq fallback.
+        
+        Provider priority:
+        1. Google Gemini (primary)
+        2. Groq (free, very fast fallback)
+        3. Heuristic fallback (offline)
         """
         # Quota tracking
         self.quota_errors = 0
         self.last_quota_error = None
         self.consecutive_quota_errors = 0
+        
+        # Provider state
+        self.gemini_available = False
+        self.groq_available = False
+        self.groq_client = None
 
         # Caching for interview plans and questions
         self.plan_cache = {}  # Cache interview plans by JD hash
         self.question_cache = {}  # Cache questions by plan_item hash
         self.cache_expiry = 3600  # 1 hour cache expiry
 
+        # Initialize Gemini
         try:
             models = list(genai.list_models())
             available_models: List[str] = []
@@ -578,19 +582,169 @@ class LLMService:
                     break
 
             if not selected_model:
-                # If nothing from preferred list is found,
-                # fall back to first available or gemini-pro
                 if available_models:
                     selected_model = available_models[0]
                 else:
                     selected_model = "gemini-pro"
 
-            print(f"[LLMService] Using Gemini model: {selected_model}")
+            self.model = genai.GenerativeModel(selected_model)
+            self.gemini_available = True
+            print(f"[LLMService] ✅ Gemini model: {selected_model}")
         except Exception as e:
-            print(f"[LLMService] Could not list models ({e}), falling back to 'gemini-pro'")
-            selected_model = "gemini-pro"
+            print(f"[LLMService] ❌ Gemini init failed: {e}")
+            self.model = None
+            self.gemini_available = False
 
-        self.model = genai.GenerativeModel(selected_model)
+        # Initialize Groq (fallback)
+        self._init_groq()
+
+    def _init_groq(self):
+        """Initialize Groq client if API key is available."""
+        try:
+            if settings.GROQ_API_KEY:
+                from groq import Groq
+                self.groq_client = Groq(api_key=settings.GROQ_API_KEY)
+                self.groq_available = True
+                print("[LLMService] ✅ Groq fallback available (llama-3.3-70b)")
+            else:
+                print("[LLMService] ⚠️  GROQ_API_KEY not set, Groq fallback disabled")
+                self.groq_available = False
+        except ImportError:
+            print("[LLMService] ⚠️  groq package not installed. Run: pip install groq")
+            self.groq_available = False
+        except Exception as e:
+            print(f"[LLMService] ❌ Groq init failed: {e}")
+            self.groq_available = False
+
+    async def _generate_with_groq(self, prompt: str, max_tokens: int = 1024) -> Optional[str]:
+        """Generate text using Groq's Llama 3.3 70B model."""
+        if not self.groq_available or not self.groq_client:
+            return None
+        
+        try:
+            import asyncio
+            
+            # Groq is synchronous, run in executor
+            def call_groq():
+                response = self.groq_client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[
+                        {"role": "system", "content": "You are a professional technical interviewer. Always respond with valid JSON when asked."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=max_tokens,
+                    temperature=0.7
+                )
+                return response.choices[0].message.content
+            
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(None, call_groq)
+            print("[GROQ] ✅ Generation successful")
+            return result
+        except Exception as e:
+            error_str = str(e).lower()
+            if "rate" in error_str or "limit" in error_str:
+                print(f"[GROQ] ⚠️  Rate limit hit: {e}")
+            else:
+                print(f"[GROQ] ❌ Error: {e}")
+            return None
+
+    async def _try_groq_conversation(
+        self,
+        answer_text: str,
+        question_text: str,
+        skill: Optional[str],
+        question_type: str,
+        jd_context: str,
+        interview_history: List[Dict[str, Any]] = None,
+        skills_unknown: List[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Try to generate conversation response using Groq with full context."""
+        if not self.groq_available:
+            return None
+        
+        # Build conversation history context
+        history_context = ""
+        if interview_history:
+            history_lines = []
+            for h in interview_history:
+                history_lines.append(f"Q ({h.get('skill', 'unknown')}): {h.get('question', '')[:100]}")
+                history_lines.append(f"A: {h.get('answer', '')[:150]}")
+            history_context = "\n".join(history_lines)
+        
+        prompt = f"""You are a professional technical interviewer having a NATURAL conversation.
+
+QUESTION ASKED: {question_text}
+SKILL BEING ASSESSED: {skill or 'General'}
+QUESTION TYPE: {question_type}
+
+CANDIDATE'S ANSWER: {answer_text}
+
+{f"CONVERSATION HISTORY (ALL previous Q&A):\n{history_context}" if history_context else "(This is the first question)"}
+
+{f"SKILLS CANDIDATE ALREADY SAID THEY DON'T KNOW: {', '.join(skills_unknown or [])}" if skills_unknown else ""}
+
+CRITICAL DETECTION - Check these FIRST:
+1. IS CANDIDATE ASKING A QUESTION? (e.g., "Can you tell me about the job role?", "What kind of work?", "Could you clarify?")
+   → If YES: Set answer_quality="question", next_action="answer_candidate", and ANSWER their question in spoken_response!
+   
+2. IS CANDIDATE SAYING THEY DON'T KNOW THIS SKILL? (e.g., "I don't have experience in...", "I haven't worked with...")
+   → If YES: Set answer_quality="skip_skill", next_action="end_topic", skill_to_skip="{skill}"
+   → spoken_response: "No problem, let's move on to something else."
+   
+3. HAS CANDIDATE ALREADY ANSWERED THIS? (Check conversation history!)
+   → If YES: Don't ask the same thing. Set next_action="continue" to move forward.
+
+INSTRUCTIONS FOR spoken_response (MAX 40 WORDS):
+- If answer was good: Brief acknowledgment
+- If answer was weak: Encouraging, move on
+- If candidate asked a question: ANSWER IT
+- If candidate doesn't know the skill: Accept gracefully
+- Sound natural, like a real human
+
+Return ONLY valid JSON:
+{{
+    "spoken_response": "Your natural spoken response (MAX 40 words)",
+    "scores": {{
+        "correctness": 0.0-5.0,
+        "depth": 0.0-5.0,
+        "clarity": 3.0,
+        "relevance": 0.0-5.0
+    }},
+    "answer_quality": "strong|partial|weak|question|skip_skill",
+    "next_action": "continue|follow_up|end_topic|answer_candidate",
+    "follow_up_question": "Only if next_action is follow_up, otherwise null",
+    "skill_to_skip": "Skill name if candidate doesn't know it, otherwise null",
+    "internal_notes": "Brief evaluation"
+}}"""
+
+        try:
+            result_text = await self._generate_with_groq(prompt, max_tokens=500)
+            if not result_text:
+                return None
+            
+            # Parse JSON
+            text = result_text.strip()
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0].strip()
+            
+            result = json.loads(text)
+            result = self._validate_conversation_response(result)
+            
+            if len(result["spoken_response"]) > 200:
+                result["spoken_response"] = result["spoken_response"][:197] + "..."
+            
+            print(f"[GROQ] ✅ Conversation response: {result['answer_quality']}")
+            return result
+            
+        except json.JSONDecodeError as e:
+            print(f"[GROQ] ❌ JSON parse error: {e}")
+            return None
+        except Exception as e:
+            print(f"[GROQ] ❌ Error: {e}")
+            return None
 
     def _get_cache_key(self, jd_text: str, resume_data: Dict[str, Any]) -> str:
         """Generate a cache key for interview plans."""
@@ -1180,7 +1334,9 @@ Return ONLY the question text."""
             return question
 
     def _get_fallback_question(self, plan_item: Dict[str, Any], jd_text: str = "", resume_summary: Dict[str, Any] = None) -> str:
-        """Fallback question if LLM fails. Now personalized based on JD and resume."""
+        """Fallback question if LLM fails. Now personalized with more variety."""
+        import random
+        
         question_type = plan_item.get("type", "technical")
         skill = plan_item.get("skill")
         difficulty = plan_item.get("difficulty", "medium")
@@ -1196,32 +1352,75 @@ Return ONLY the question text."""
         resume_skills = resume_summary.get("skills", []) if resume_summary else []
 
         if question_type == "introduction":
-            return "Please tell me about yourself, your background, and what brings you to this opportunity today."
+            intros = [
+                "Please tell me about yourself, your background, and what brings you to this opportunity today.",
+                "I'd love to hear about your journey into tech. What got you started and where are you now?",
+                "Walk me through your professional background and what excites you about this role."
+            ]
+            return random.choice(intros)
 
         elif question_type == "technical":
             # Use skill from plan or extract from JD/resume
-            target_skill = skill or jd_skills[0] if jd_skills else resume_skills[0] if resume_skills else "programming"
+            target_skill = skill or (jd_skills[0] if jd_skills else (resume_skills[0] if resume_skills else "programming"))
 
             if difficulty == "basic":
-                return f"Can you explain what {target_skill} is and why it's useful in software development?"
+                basic_templates = [
+                    f"Can you explain what {target_skill} is and why it's useful in software development?",
+                    f"What do you know about {target_skill}? How would you describe it to someone new to tech?",
+                    f"In your own words, what is {target_skill} and where have you seen it used?"
+                ]
+                return random.choice(basic_templates)
             elif difficulty == "advanced":
-                return f"Can you describe a complex problem you solved using {target_skill} and the technical challenges you faced?"
+                advanced_templates = [
+                    f"Can you describe a complex problem you solved using {target_skill} and the technical challenges you faced?",
+                    f"What's the most difficult aspect of working with {target_skill}? How do you handle those challenges?",
+                    f"Tell me about a time when {target_skill} didn't work as expected. How did you debug and resolve it?",
+                    f"How would you design a scalable solution using {target_skill}? Walk me through your approach."
+                ]
+                return random.choice(advanced_templates)
             else:  # medium
-                return f"Can you walk me through how you've used {target_skill} in your projects and what you find most challenging about it?"
+                medium_templates = [
+                    f"Can you walk me through how you've used {target_skill} in your projects?",
+                    f"What's your experience level with {target_skill}? Give me a specific example of how you've applied it.",
+                    f"If I asked you to build something with {target_skill} today, what would be your approach?",
+                    f"What are the key concepts in {target_skill} that you find most important?"
+                ]
+                return random.choice(medium_templates)
 
         elif question_type == "project":
             # Personalize based on resume experience
             experience_years = resume_summary.get("experience_years", 0) if resume_summary else 0
 
             if experience_years > 3:
-                return "Can you describe a significant project you led and the key technical decisions you made?"
+                senior_templates = [
+                    "Can you describe a significant project you led and the key technical decisions you made?",
+                    "Tell me about a project where you had to make architectural decisions. What factors did you consider?",
+                    "Describe a project where you mentored others. What was your approach to guiding the team?"
+                ]
+                return random.choice(senior_templates)
             else:
-                return "Tell me about a project you're most proud of. What was your role and what did you learn from it?"
+                junior_templates = [
+                    "Tell me about a project you're most proud of. What was your role and what did you learn from it?",
+                    "What's a coding project you've worked on recently? Walk me through the problem you were solving.",
+                    "Describe any project, even a personal or academic one, that taught you something valuable."
+                ]
+                return random.choice(junior_templates)
 
         elif question_type == "behavioral":
-            return "Describe a situation where you had to work with a team to solve a challenging problem. What was your role and what was the outcome?"
+            behavioral_templates = [
+                "Describe a situation where you had to work with a team to solve a challenging problem. What was your role?",
+                "Tell me about a time you had to learn something new quickly. How did you approach it?",
+                "Can you share an example of when you received critical feedback? How did you respond?",
+                "Describe a situation where you disagreed with a teammate. How did you handle it?"
+            ]
+            return random.choice(behavioral_templates)
         else:  # hr or unknown
-            return "What interests you most about this role and our company, and why do you think you'd be a good fit?"
+            hr_templates = [
+                "What interests you most about this role and our company?",
+                "Where do you see yourself in the next few years?",
+                "What are you looking for in your next role?"
+            ]
+            return random.choice(hr_templates)
 
     # ------------------------------------------------------------------
     # ANSWER EVALUATION
@@ -1594,6 +1793,501 @@ Return ONLY the follow-up question text."""
             return "simplify" if answer_quality == "weak" else "rephrase"
         else:
             return "hint"
+
+    # ------------------------------------------------------------------
+    # UNIFIED CONVERSATION (Single LLM Call - Optimized)
+    # ------------------------------------------------------------------
+    async def process_answer_and_respond(
+        self,
+        answer_text: str,
+        question_text: str,
+        skill: Optional[str],
+        jd_context: str,
+        interview_history: List[Dict[str, Any]] = None,
+        skills_unknown: List[str] = None,
+        question_type: str = "technical"
+    ) -> Dict[str, Any]:
+        """
+        UNIFIED SINGLE-CALL method that does everything in one LLM request:
+        1. Evaluates the answer (scores)
+        2. Generates natural interviewer response
+        3. Decides next action (follow-up, next question, etc.)
+        4. Detects if candidate asked a question
+        5. Detects if candidate said they don't know a skill
+        
+        This reduces API calls by 50% and improves latency significantly.
+        
+        Returns:
+        {
+            "spoken_response": str,  # What to say to candidate (max 50 words)
+            "scores": {"correctness": float, "depth": float, "relevance": float},
+            "answer_quality": "strong" | "partial" | "weak" | "question" | "skip_skill",
+            "next_action": "continue" | "follow_up" | "end_topic" | "answer_candidate",
+            "follow_up_question": str | None,  # Only if next_action is "follow_up"
+            "skill_to_skip": str | None,  # If candidate doesn't know this skill
+            "internal_notes": str  # For database logging
+        }
+        """
+        print(f"[UNIFIED] Processing answer for skill: {skill}, type: {question_type}")
+        print(f"[UNIFIED] Interview history length: {len(interview_history) if interview_history else 0}")
+        print(f"[UNIFIED] Skills unknown: {skills_unknown}")
+        
+        # Check quota - if Gemini exhausted, try Groq first
+        if self.consecutive_quota_errors >= 2:
+            print("[UNIFIED] Gemini quota exhausted, trying Groq...")
+            groq_result = await self._try_groq_conversation(
+                answer_text, question_text, skill, question_type, jd_context,
+                interview_history, skills_unknown
+            )
+            if groq_result:
+                return groq_result
+            print("[UNIFIED] Groq also failed, using heuristic fallback")
+            return self._get_fallback_conversation_response(
+                answer_text, question_text, skill, question_type, interview_history
+            )
+        
+        # Build conversation history context
+        history_context = ""
+        if interview_history:
+            history_lines = []
+            for h in interview_history:
+                history_lines.append(f"Q ({h.get('skill', 'unknown')}): {h.get('question', '')[:100]}")
+                history_lines.append(f"A: {h.get('answer', '')[:150]}")
+            history_context = "\n".join(history_lines)
+
+        prompt = f"""You are a professional technical interviewer having a NATURAL conversation with a candidate.
+
+CURRENT QUESTION: {question_text}
+SKILL BEING ASSESSED: {skill or 'General'}
+QUESTION TYPE: {question_type}
+
+CANDIDATE'S ANSWER: {answer_text}
+
+JOB CONTEXT (relevant skills needed):
+{jd_context[:400]}
+
+{f"CONVERSATION HISTORY (ALL previous Q&A):\n{history_context}" if history_context else "(This is the first question)"}
+
+{f"SKILLS CANDIDATE SAID THEY DON'T KNOW: {', '.join(skills_unknown or [])}" if skills_unknown else ""}
+
+YOUR TASK:
+Analyze the candidate's answer and respond naturally. Be CONTEXT-AWARE.
+
+CRITICAL DETECTION - Check these FIRST:
+1. IS CANDIDATE ASKING A QUESTION? (e.g., "Can you tell me about the job role?", "What kind of work?", "Could you clarify?")
+   → If YES: Set answer_quality="question", next_action="answer_candidate", and ANSWER their question in spoken_response!
+   
+2. IS CANDIDATE SAYING THEY DON'T KNOW THIS SKILL? (e.g., "I don't have experience in...", "I haven't worked with...", "I don't know...")
+   → If YES: Set answer_quality="skip_skill", next_action="end_topic", skill_to_skip=the skill they don't know
+   → spoken_response: "No problem, let's move on to something else."
+   
+3. HAS CANDIDATE ALREADY ANSWERED THIS/SIMILAR QUESTION? (Check conversation history!)
+   → If YES: Don't ask the same thing again. Set next_action="continue" to move forward.
+
+INSTRUCTIONS FOR spoken_response (MAX 40 WORDS):
+- If answer was good: Brief acknowledgment + smooth transition
+- If answer was weak: Encouraging response, don't repeat the same question
+- If candidate asked a question: ANSWER IT (e.g., explain the job role, clarify what you meant)
+- If candidate doesn't know the skill: Accept gracefully and move on
+- Sound natural, like a real human conversation
+
+Respond ONLY with valid JSON (no markdown, no explanation):
+{{
+    "spoken_response": "Your natural spoken response (MAX 40 words)",
+    "scores": {{
+        "correctness": 0.0-5.0,
+        "depth": 0.0-5.0,
+        "relevance": 0.0-5.0
+    }},
+    "answer_quality": "strong|partial|weak|question|skip_skill",
+    "next_action": "continue|follow_up|end_topic|answer_candidate",
+    "follow_up_question": "Only if next_action is follow_up, otherwise null",
+    "skill_to_skip": "Skill name if candidate doesn't know it, otherwise null",
+    "internal_notes": "Brief evaluation notes for records (1-2 sentences)"
+}}"""
+
+        try:
+            max_retries = 2
+            retry_delay = 2
+
+            for attempt in range(max_retries):
+                try:
+                    import asyncio
+                    response = await asyncio.to_thread(self.model.generate_content, prompt)
+                    text = response.text.strip()
+                    
+                    # Extract JSON from response
+                    if "```json" in text:
+                        text = text.split("```json")[1].split("```")[0].strip()
+                    elif "```" in text:
+                        text = text.split("```")[1].split("```")[0].strip()
+                    
+                    result = json.loads(text)
+                    
+                    # Validate and normalize response
+                    result = self._validate_conversation_response(result)
+                    
+                    # Enforce spoken response length (for TTS speed)
+                    if len(result["spoken_response"]) > 200:
+                        result["spoken_response"] = result["spoken_response"][:197] + "..."
+                    
+                    print(f"[UNIFIED] Quality: {result['answer_quality']}, Action: {result['next_action']}")
+                    print(f"[UNIFIED] Response: {result['spoken_response'][:60]}...")
+                    
+                    self._record_success()
+                    return result
+
+                except json.JSONDecodeError as e:
+                    print(f"[UNIFIED] JSON parse error: {e}, retrying...")
+                    if attempt < max_retries - 1:
+                        continue
+                    break
+                    
+                except Exception as e:
+                    error_msg = str(e).lower()
+                    if "quota" in error_msg or "rate limit" in error_msg:
+                        self._record_quota_error()
+                        if attempt < max_retries - 1:
+                            print(f"[UNIFIED] Rate limit, retrying in {retry_delay}s...")
+                            await asyncio.sleep(retry_delay)
+                            retry_delay = min(retry_delay * 1.5, 8)
+                            continue
+                        else:
+                            break
+                    else:
+                        print(f"[UNIFIED] Error: {e}")
+                        break
+
+            # Try Groq fallback before heuristic fallback
+            if self.groq_available:
+                print("[UNIFIED] Trying Groq fallback...")
+                groq_result = await self._generate_with_groq(prompt, max_tokens=500)
+                if groq_result:
+                    try:
+                        # Parse Groq response
+                        text = groq_result.strip()
+                        if "```json" in text:
+                            text = text.split("```json")[1].split("```")[0].strip()
+                        elif "```" in text:
+                            text = text.split("```")[1].split("```")[0].strip()
+                        
+                        result = json.loads(text)
+                        result = self._validate_conversation_response(result)
+                        
+                        if len(result["spoken_response"]) > 200:
+                            result["spoken_response"] = result["spoken_response"][:197] + "..."
+                        
+                        print(f"[GROQ] Success! Quality: {result['answer_quality']}")
+                        return result
+                    except json.JSONDecodeError as e:
+                        print(f"[GROQ] JSON parse error: {e}")
+
+            # Heuristic fallback if all LLMs failed
+            return self._get_fallback_conversation_response(
+                answer_text, question_text, skill, question_type
+            )
+
+        except Exception as e:
+            print(f"[UNIFIED] Unexpected error: {e}, using fallback")
+            return self._get_fallback_conversation_response(
+                answer_text, question_text, skill, question_type, interview_history
+            )
+
+    def _validate_conversation_response(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate and normalize the conversation response."""
+        # Ensure all required fields exist
+        if "spoken_response" not in result:
+            result["spoken_response"] = "I see. Let me note that down."
+        
+        if "scores" not in result:
+            result["scores"] = {"correctness": 3.0, "depth": 3.0, "clarity": 3.0, "relevance": 3.0}
+        
+        # Normalize scores - ensure all 4 required scores exist
+        for key in ["correctness", "depth", "clarity", "relevance"]:
+            if key not in result["scores"]:
+                result["scores"][key] = 3.0
+            result["scores"][key] = max(0.0, min(5.0, float(result["scores"][key])))
+        
+        if "answer_quality" not in result:
+            avg = sum(result["scores"].values()) / 4
+            result["answer_quality"] = "strong" if avg >= 4 else "partial" if avg >= 2.5 else "weak"
+        
+        # Validate answer_quality values
+        valid_qualities = ["strong", "partial", "weak", "question", "skip_skill"]
+        if result["answer_quality"] not in valid_qualities:
+            result["answer_quality"] = "partial"
+        
+        if "next_action" not in result:
+            result["next_action"] = "continue"
+        
+        # Validate next_action values
+        valid_actions = ["continue", "follow_up", "end_topic", "answer_candidate"]
+        if result["next_action"] not in valid_actions:
+            result["next_action"] = "continue"
+        
+        if result["next_action"] == "follow_up" and not result.get("follow_up_question"):
+            result["follow_up_question"] = f"Could you elaborate a bit more on that?"
+        
+        if "internal_notes" not in result:
+            result["internal_notes"] = f"Answer quality: {result['answer_quality']}"
+        
+        if "skill_to_skip" not in result:
+            result["skill_to_skip"] = None
+        
+        return result
+
+    def _get_fallback_conversation_response(
+        self,
+        answer_text: str,
+        question_text: str,
+        skill: Optional[str],
+        question_type: str,
+        interview_history: List[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Smart fallback when API is unavailable.
+        Handles: negative answers, off-topic responses, candidate questions, frustration.
+        Now with interview history context!
+        """
+        import random
+        
+        answer_lower = answer_text.lower().strip()
+        question_lower = question_text.lower()
+        answer_words = answer_text.split()
+        answer_length = len(answer_words)
+        
+        # Build context from interview history
+        mentioned_skills = set()
+        asked_questions = []
+        if interview_history:
+            for h in interview_history:
+                if h.get('skill'):
+                    mentioned_skills.add(h['skill'].lower())
+                asked_questions.append(h.get('question', '').lower())
+        
+        print(f"[FALLBACK] History context: {len(interview_history or [])} Q&As, mentioned skills: {mentioned_skills}")
+        
+        # PRIORITY 1: Detect if candidate is asking a question to the interviewer
+        candidate_asking = any(pattern in answer_lower for pattern in [
+            "can you", "could you", "what is the", "tell me about", "what are",
+            "please describe", "please tell", "what's the job", "job role",
+            "what does this", "what will i", "what would i", "tell me more about"
+        ])
+        
+        # PRIORITY 2: Detect frustration or asking same thing repeatedly
+        frustrated_patterns = [
+            "shut", "stop", "what i asked", "respond to", "answer my", "listen to me",
+            "you're not", "you are not", "properly", "correctly", "rude", "stupid",
+            "asking the same", "same question", "already answered", "already told"
+        ]
+        is_frustrated = any(pattern in answer_lower for pattern in frustrated_patterns)
+        
+        # PRIORITY 3: Detect candidate saying they don't know the skill
+        skill_decline_patterns = [
+            "don't have experience", "no experience", "haven't worked with",
+            "not familiar with", "don't know", "never used", "no exposure",
+            "not worked on", "not my area", "haven't used"
+        ]
+        is_skill_decline = any(pattern in answer_lower for pattern in skill_decline_patterns)
+        
+        # Handle candidate asking questions - ACTUALLY ANSWER THEM
+        if candidate_asking:
+            # If they asked about job role, give them some info!
+            if any(phrase in answer_lower for phrase in ["job role", "position", "what kind", "what will i"]):
+                responses = [
+                    "Great question! This role involves working with the technologies I'm asking about. We're looking for someone who can contribute to building and maintaining our applications. Let me continue with a few more questions to understand your fit.",
+                    "Absolutely! This position focuses on software development, and we're assessing your technical skills across different areas. Let me ask a few more questions so we can see where your strengths lie.",
+                    "Happy to share! The role involves hands-on development work. The questions I'm asking help us understand which areas you'd excel in. Let's continue."
+                ]
+            else:
+                responses = [
+                    "That's a fair question! Let me clarify, and then we can continue. What specifically would you like to know?",
+                    "Sure, I can help with that. Let me know what you'd like clarified, and then we'll proceed.",
+                    "Good question! Let me address that briefly, then continue our discussion."
+                ]
+            return {
+                "spoken_response": random.choice(responses),
+                "scores": {"correctness": 2.5, "depth": 2.0, "clarity": 3.0, "relevance": 1.5},
+                "answer_quality": "question",
+                "next_action": "continue",  # Move on after answering
+                "follow_up_question": None,
+                "skill_to_skip": None,
+                "internal_notes": "Candidate asked question. Provided brief answer."
+            }
+        
+        # Handle frustration
+        if is_frustrated:
+            responses = [
+                "I apologize if my questions weren't clear. Let me move to a different topic that might be more relevant to your experience.",
+                "I understand. Let me adjust my approach. Let's try a different area.",
+                "I hear you. Let's move on to something different that plays to your strengths."
+            ]
+            return {
+                "spoken_response": random.choice(responses),
+                "scores": {"correctness": 1.0, "depth": 1.0, "clarity": 2.0, "relevance": 1.0},
+                "answer_quality": "weak",
+                "next_action": "continue",
+                "follow_up_question": None,
+                "skill_to_skip": skill,  # Skip this skill since they're frustrated
+                "internal_notes": "Candidate expressed frustration. Moving to different topic."
+            }
+        
+        # Handle skill decline - DON'T ASK FOLLOW-UP, JUST MOVE ON
+        if is_skill_decline:
+            responses = [
+                f"No problem at all! Not everyone has worked with {skill or 'every technology'}. Let's move on to something else.",
+                f"That's perfectly fine. We'll skip {skill or 'this area'} and explore where your experience lies.",
+                "Understood, no worries. Let's focus on areas where you have more experience.",
+                "That's okay! Let's move on to the next topic."
+            ]
+            return {
+                "spoken_response": random.choice(responses),
+                "scores": {"correctness": 1.5, "depth": 1.0, "clarity": 3.0, "relevance": 1.0},
+                "answer_quality": "skip_skill",
+                "next_action": "end_topic",
+                "follow_up_question": None,
+                "skill_to_skip": skill,  # Mark this skill to skip
+                "internal_notes": f"Candidate declined skill: {skill}. Skipping related questions."
+            }
+        
+        # Detect negative/declining answers (general)
+        negative_patterns = [
+            "no", "nope", "i haven't", "i have not", "i don't", "i do not",
+            "not used", "never used", "not familiar",
+            "i'm not sure", "not really", "haven't worked"
+        ]
+        is_negative = any(pattern in answer_lower for pattern in negative_patterns)
+        
+        # Detect off-topic answers (question about X but answer doesn't mention X-related terms)
+        is_off_topic = False
+        if skill:
+            skill_terms = skill.lower().split()
+            # Check if answer mentions anything related to the skill
+            skill_mentioned = any(term in answer_lower for term in skill_terms)
+            # Check for completely unrelated content
+            off_topic_indicators = ["government", "politics", "weather", "sports", "movies", "food"]
+            has_off_topic = any(ind in answer_lower for ind in off_topic_indicators)
+            is_off_topic = has_off_topic and not skill_mentioned
+        
+        # Handle based on detected patterns
+        if is_off_topic:
+            # Candidate went off-topic
+            responses = [
+                f"That's an interesting point. Let me bring us back to {skill or 'the topic'}. ",
+                f"I appreciate your perspective. However, for this role, I'd like to focus on {skill or 'your technical background'}. ",
+                f"Thanks for sharing. Let's get back to discussing your experience with {skill or 'the technologies in this role'}. "
+            ]
+            response = random.choice(responses) + "Let's move on to the next question."
+            quality = "weak"
+            next_action = "continue"  # Skip to next question, don't dwell
+            follow_up = None
+            scores = {"correctness": 1.0, "depth": 1.0, "clarity": 2.0, "relevance": 0.5}
+            
+        elif is_negative and answer_length < 15:
+            # Short negative answer - acknowledge and move on gracefully
+            if question_type == "introduction":
+                responses = [
+                    "That's alright! Let's move forward and learn more about you through other questions.",
+                    "No problem. We can explore your background through the technical questions."
+                ]
+            else:
+                responses = [
+                    f"That's okay! Not everyone has experience with {skill or 'every technology'}. Let's move on.",
+                    f"No worries. Let's see what other skills you can bring to the table.",
+                    f"That's fine. We'll explore other areas where you have more experience.",
+                    f"Understood. Let's continue with a different topic."
+                ]
+            response = random.choice(responses)
+            quality = "weak"
+            next_action = "continue"  # Move on, don't ask follow-up about something they don't know
+            follow_up = None
+            scores = {"correctness": 2.0, "depth": 1.5, "clarity": 3.0, "relevance": 2.0}
+            
+        elif answer_length < 8:
+            # Very short answer (but not explicitly negative)
+            if question_type == "introduction":
+                responses = [
+                    "Could you tell me a bit more about your background?",
+                    "I'd love to hear more about your journey. What led you to this field?"
+                ]
+                follow_up = "What aspects of your experience are you most excited to bring to this role?"
+            elif question_type == "project":
+                responses = [
+                    "I'd like to hear more about your project experience.",
+                    "Could you share any project you've worked on, even a small one?"
+                ]
+                follow_up = "What's a problem you've solved recently that you're proud of?"
+            else:
+                responses = [
+                    f"Could you elaborate a bit more on your experience with {skill or 'this'}?",
+                    "I'd like to understand this better. Can you give me more details?"
+                ]
+                follow_up = f"Even if it's from coursework or personal projects, any experience with {skill or 'this technology'}?"
+            
+            response = random.choice(responses)
+            quality = "weak"
+            next_action = "follow_up"
+            scores = {"correctness": 2.5, "depth": 1.5, "clarity": 2.5, "relevance": 2.5}
+            
+        elif answer_length < 25:
+            # Medium-length answer - partial response
+            if question_type == "introduction":
+                responses = [
+                    "Thanks for sharing! That gives me a good starting point.",
+                    "Interesting background! Let's dive into the technical aspects."
+                ]
+            elif question_type == "project":
+                responses = [
+                    "Thanks for that overview. That sounds like valuable experience.",
+                    "Interesting project! Let's explore your technical skills next."
+                ]
+            else:
+                responses = [
+                    f"Good start on {skill or 'this topic'}. Let's continue.",
+                    "That's helpful context. Let's explore further.",
+                    "Thanks for that explanation. Moving on."
+                ]
+            
+            response = random.choice(responses)
+            quality = "partial"
+            next_action = "continue"
+            follow_up = None
+            scores = {"correctness": 3.0, "depth": 2.5, "clarity": 3.0, "relevance": 3.0}
+            
+        else:
+            # Long, detailed answer - strong response
+            if question_type == "introduction":
+                responses = [
+                    "Excellent introduction! You clearly have a rich background.",
+                    "Great overview of your experience! I can see you've done interesting work."
+                ]
+            elif question_type == "project":
+                responses = [
+                    "That's a great project to highlight! You handled it well.",
+                    "Impressive project experience! I can see your problem-solving skills."
+                ]
+            else:
+                responses = [
+                    f"Excellent explanation of {skill or 'this concept'}! You clearly have strong knowledge here.",
+                    "Great depth of understanding! That's exactly the kind of insight I was looking for.",
+                    "Very thorough answer! Let's move on to the next topic."
+                ]
+            
+            response = random.choice(responses)
+            quality = "strong"
+            next_action = "continue"
+            follow_up = None
+            scores = {"correctness": 4.0, "depth": 3.5, "clarity": 4.0, "relevance": 4.0}
+        
+        return {
+            "spoken_response": response,
+            "scores": scores,
+            "answer_quality": quality,
+            "next_action": next_action,
+            "follow_up_question": follow_up,
+            "skill_to_skip": None,
+            "internal_notes": f"Fallback: {quality}. Length: {answer_length} words. Negative: {is_negative}. Off-topic: {is_off_topic}."
+        }
 
     # ------------------------------------------------------------------
     # FINAL REPORT
