@@ -1310,6 +1310,292 @@ Return ONLY valid JSON:
             }
 
     # ------------------------------------------------------------------
+    # CONVERSATIONAL INTERVIEWER RESPONSE
+    # ------------------------------------------------------------------
+    def classify_answer_quality(self, evaluation: Dict[str, Any]) -> str:
+        """
+        Deterministic classification of answer quality based on evaluation scores.
+        
+        Returns: "strong" | "partial" | "weak"
+        """
+        correctness = evaluation.get("correctness", 3.0)
+        depth = evaluation.get("depth", 3.0)
+        relevance = evaluation.get("relevance", 3.0)
+        
+        # Calculate average of the three most important dimensions
+        avg_score = (correctness + depth + relevance) / 3
+        
+        # Deterministic thresholds
+        if avg_score >= 4.0:
+            return "strong"
+        elif avg_score >= 2.5:
+            return "partial"
+        else:
+            return "weak"
+
+    async def generate_interviewer_response(
+        self,
+        answer_quality: str,
+        question_text: str,
+        answer_text: str,
+        evaluation: Dict[str, Any],
+        skill: Optional[str] = None
+    ) -> str:
+        """
+        Generate natural interviewer feedback based on answer quality.
+        This should feel conversational and human-like.
+        
+        Returns: A short spoken response (1-2 sentences max)
+        """
+        # Check if we should skip API call due to quota
+        if self.consecutive_quota_errors >= 2:
+            print(f"[INTERVIEWER RESPONSE] Using fallback due to quota errors")
+            return self._get_fallback_interviewer_response(answer_quality, skill)
+
+        prompt = f"""You are a friendly, professional technical interviewer. 
+The candidate just answered a question. Generate a brief, natural spoken response.
+
+QUESTION ASKED:
+{question_text[:200]}
+
+CANDIDATE'S ANSWER:
+{answer_text[:300]}
+
+ANSWER QUALITY: {answer_quality}
+{f"SKILL: {skill}" if skill else ""}
+
+Based on the answer quality, generate ONE of these types of responses:
+
+If STRONG:
+- Acknowledge the good answer positively
+- Show appreciation for depth/clarity
+- Examples: "Great answer!", "That's exactly right.", "I like how you explained that."
+
+If PARTIAL:
+- Acknowledge what was correct
+- Gently indicate something was missing
+- Examples: "Good start, but...", "You're on the right track.", "That covers part of it."
+
+If WEAK:
+- Stay encouraging and professional
+- Indicate the answer needs clarification
+- Examples: "Let me rephrase that.", "I think there's some confusion here.", "Let's approach this differently."
+
+CRITICAL RULES:
+- MAXIMUM 50 characters - Keep it very brief
+- Sound natural and conversational
+- Be encouraging, not harsh
+- Use simple, spoken language
+- NO technical jargon in the feedback itself
+
+Return ONLY the interviewer's spoken response, nothing else."""
+
+        try:
+            max_retries = 2
+            retry_delay = 2
+
+            for attempt in range(max_retries):
+                try:
+                    import asyncio
+                    response = await asyncio.to_thread(self.model.generate_content, prompt)
+                    feedback = response.text.strip().strip('"').strip("'")
+                    
+                    # Enforce 50 character limit for quick feedback
+                    if len(feedback) > 50:
+                        feedback = feedback[:47] + "..."
+                    
+                    print(f"[INTERVIEWER RESPONSE] Generated: {feedback}")
+                    self._record_success()
+                    return feedback
+
+                except Exception as e:
+                    error_msg = str(e).lower()
+                    if "quota" in error_msg or "rate limit" in error_msg:
+                        self._record_quota_error()
+                        if attempt < max_retries - 1:
+                            await asyncio.sleep(retry_delay)
+                            retry_delay = min(retry_delay * 1.5, 8)
+                            continue
+                        else:
+                            break
+                    else:
+                        break
+
+            return self._get_fallback_interviewer_response(answer_quality, skill)
+
+        except Exception as e:
+            print(f"[INTERVIEWER RESPONSE] Error: {e}, using fallback")
+            return self._get_fallback_interviewer_response(answer_quality, skill)
+
+    def _get_fallback_interviewer_response(self, answer_quality: str, skill: Optional[str] = None) -> str:
+        """Fallback interviewer responses for different answer qualities."""
+        if answer_quality == "strong":
+            responses = [
+                "Great answer!",
+                "That's exactly right.",
+                "Well explained.",
+                "Perfect, thank you."
+            ]
+        elif answer_quality == "partial":
+            responses = [
+                "Good start.",
+                "You're on the right track.",
+                "That covers part of it.",
+                "Interesting point."
+            ]
+        else:  # weak
+            responses = [
+                "Let me rephrase that.",
+                "Let's try a different angle.",
+                "I think there's some confusion here.",
+                "Let me clarify."
+            ]
+        
+        # Simple rotation based on hash to add variety
+        import hashlib
+        idx = int(hashlib.md5(str(skill).encode()).hexdigest(), 16) % len(responses)
+        return responses[idx]
+
+    async def generate_follow_up_question(
+        self,
+        original_question: str,
+        answer_text: str,
+        skill: str,
+        follow_up_type: str = "simplify"
+    ) -> str:
+        """
+        Generate a follow-up question when the candidate's answer was weak/partial.
+        
+        follow_up_type options:
+        - "simplify": Ask a simpler, foundational version
+        - "rephrase": Rephrase the original question
+        - "hint": Give a hint and ask again
+        
+        Returns: A follow-up question string
+        """
+        # Check cache and quota
+        if self.consecutive_quota_errors >= 2:
+            return self._get_fallback_follow_up(original_question, skill, follow_up_type)
+
+        prompt = f"""You are a technical interviewer. The candidate gave an incomplete/unclear answer.
+Generate a follow-up question to help them.
+
+ORIGINAL QUESTION:
+{original_question}
+
+CANDIDATE'S ANSWER:
+{answer_text[:300]}
+
+SKILL: {skill}
+FOLLOW-UP TYPE: {follow_up_type}
+
+Based on the follow-up type, generate:
+
+If SIMPLIFY:
+- Ask a simpler, more foundational question about {skill}
+- Break down the concept into basics
+- Make it easier to answer
+
+If REPHRASE:
+- Ask the same thing but in different words
+- Use simpler language
+- Add a bit more context
+
+If HINT:
+- Give a small hint or example
+- Then ask the question again with that guidance
+
+CRITICAL RULES:
+- MAXIMUM 400 characters
+- Keep it conversational and spoken-friendly
+- Sound encouraging, not condescending
+- Use FULL FORMS (not abbreviations)
+
+Return ONLY the follow-up question text."""
+
+        try:
+            max_retries = 2
+            retry_delay = 2
+
+            for attempt in range(max_retries):
+                try:
+                    import asyncio
+                    response = await asyncio.to_thread(self.model.generate_content, prompt)
+                    question = response.text.strip().strip('"').strip("'")
+                    
+                    if len(question) > 400:
+                        question = question[:397] + "..."
+                    
+                    print(f"[FOLLOW-UP] Generated ({len(question)} chars): {question[:80]}...")
+                    self._record_success()
+                    return question
+
+                except Exception as e:
+                    error_msg = str(e).lower()
+                    if "quota" in error_msg or "rate limit" in error_msg:
+                        self._record_quota_error()
+                        if attempt < max_retries - 1:
+                            await asyncio.sleep(retry_delay)
+                            retry_delay = min(retry_delay * 1.5, 8)
+                            continue
+                        else:
+                            break
+                    else:
+                        break
+
+            return self._get_fallback_follow_up(original_question, skill, follow_up_type)
+
+        except Exception as e:
+            print(f"[FOLLOW-UP] Error: {e}, using fallback")
+            return self._get_fallback_follow_up(original_question, skill, follow_up_type)
+
+    def _get_fallback_follow_up(self, original_question: str, skill: str, follow_up_type: str) -> str:
+        """Fallback follow-up questions."""
+        if follow_up_type == "simplify":
+            return f"Let me ask something more basic: Can you explain what {skill} is and why it's important?"
+        elif follow_up_type == "rephrase":
+            return f"Let me ask that differently: In your own words, how would you describe {skill}?"
+        else:  # hint
+            return f"Here's a hint: Think about how {skill} is commonly used in real projects. Can you give me an example?"
+
+    def should_ask_follow_up(
+        self,
+        answer_quality: str,
+        follow_up_count: int,
+        max_follow_ups: int = 2
+    ) -> bool:
+        """
+        Deterministic logic: decide if we should ask a follow-up question.
+        
+        Rules:
+        - Only for "weak" or "partial" answers
+        - Maximum 2 follow-ups per skill
+        - Then move on regardless
+        """
+        if follow_up_count >= max_follow_ups:
+            print(f"[FOLLOW-UP LOGIC] Max follow-ups ({max_follow_ups}) reached, moving on")
+            return False
+        
+        if answer_quality in ["weak", "partial"]:
+            print(f"[FOLLOW-UP LOGIC] Answer quality '{answer_quality}', asking follow-up #{follow_up_count + 1}")
+            return True
+        
+        print(f"[FOLLOW-UP LOGIC] Answer quality '{answer_quality}', no follow-up needed")
+        return False
+
+    def get_follow_up_type(self, follow_up_count: int, answer_quality: str) -> str:
+        """
+        Deterministic logic: decide what type of follow-up to use.
+        
+        First follow-up: Simplify (for weak) or Rephrase (for partial)
+        Second follow-up: Always hint
+        """
+        if follow_up_count == 0:
+            return "simplify" if answer_quality == "weak" else "rephrase"
+        else:
+            return "hint"
+
+    # ------------------------------------------------------------------
     # FINAL REPORT
     # ------------------------------------------------------------------
     def generate_final_report(
