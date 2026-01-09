@@ -431,7 +431,7 @@ const InterviewRoom = () => {
         return
       }
 
-      setCurrentQuestion(question)
+      // setCurrentQuestion(question)
       setSubtitle(question.question_text)
 
       // Check if this is a coding question
@@ -840,12 +840,12 @@ const InterviewRoom = () => {
       handleInterviewComplete()
     } else if (result.next_action === 'follow_up' && result.follow_up_question) {
       // Ask follow-up question directly (no need to fetch from server)
-      setCurrentQuestion({ text: result.follow_up_question })
+      // setCurrentQuestion({ text: result.follow_up_question })
       await speakQuestion(result.follow_up_question)
     } else if (result.next_question_text) {
       // NEW: Use next question from conversation response (no extra API call!)
       console.log('[Interview] Using next question from conversation response')
-      setCurrentQuestion({ text: result.next_question_text })
+      // setCurrentQuestion({ text: result.next_question_text })
       setSubtitle(result.next_question_text)
 
       // Play the next question audio if available
