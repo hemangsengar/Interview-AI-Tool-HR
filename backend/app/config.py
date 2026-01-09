@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     # Groq (Free fallback LLM - very fast)
     GROQ_API_KEY: str = ""
     
+    # LM Studio (Local LLM via OpenAI-compatible API)
+    LM_STUDIO_URL: str = "http://127.0.0.1:1234"  # Default LM Studio URL (no trailing slash)
+    LM_STUDIO_MODEL: str = "local-model"  # Model name in LM Studio
+    USE_LOCAL_LLM: bool = True  # Set to True to prefer local LLM
+    
     # Sarvam AI
     SARVAM_API_KEY: str = ""
     SARVAM_STT_URL: str = "https://api.sarvam.ai/speech-to-text"
