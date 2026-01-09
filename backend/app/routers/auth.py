@@ -42,9 +42,9 @@ async def migrate_database(db: Session = Depends(get_db)):
 @router.post("/signup", response_model=Token, status_code=status.HTTP_201_CREATED)
 async def signup(request: Request, user_data: UserSignup, db: Session = Depends(get_db)):
     """Register a new HR user."""
-    # Rate limit: 5 signups per hour per IP
+    # Rate limit: 50 signups per hour per IP (increased for development)
     client_ip = request.client.host if request.client else "unknown"
-    rate_limiter.check_rate_limit(client_ip, max_requests=5, window_seconds=3600)
+    rate_limiter.check_rate_limit(client_ip, max_requests=50, window_seconds=3600)
     
     try:
         print(f"[SIGNUP] Received data: name={user_data.name}, email={user_data.email}")
@@ -97,9 +97,9 @@ async def signup(request: Request, user_data: UserSignup, db: Session = Depends(
 @router.post("/login", response_model=Token)
 async def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db)):
     """Login HR user."""
-    # Rate limit: 10 login attempts per 5 minutes per IP
+    # Rate limit: 50 login attempts per 5 minutes per IP (increased for development)
     client_ip = request.client.host if request.client else "unknown"
-    rate_limiter.check_rate_limit(client_ip, max_requests=10, window_seconds=300)
+    rate_limiter.check_rate_limit(client_ip, max_requests=50, window_seconds=300)
     
     print(f"[LOGIN] Attempt for email: {credentials.email}")
     

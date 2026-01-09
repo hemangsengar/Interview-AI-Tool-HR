@@ -179,9 +179,9 @@ async def register_candidate(
     db: Session = Depends(get_db)
 ):
     """Register a candidate for a job and create interview session."""
-    # Rate limit: 5 candidate applications per hour per IP
+    # Rate limit: 50 candidate applications per hour per IP (increased for development)
     client_ip = request.client.host if request.client else "unknown"
-    rate_limiter.check_rate_limit(client_ip, max_requests=5, window_seconds=3600)
+    rate_limiter.check_rate_limit(client_ip, max_requests=50, window_seconds=3600)
     
     # Verify job exists
     job = db.query(Job).filter(Job.id == job_id).first()
