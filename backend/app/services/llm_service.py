@@ -615,6 +615,202 @@ class LLMService:
         except Exception as e:
             print(f"[LLMService] ❌ Groq init failed: {e}")
             self.groq_available = False
+        
+        # Initialize LM Studio (Local LLM)
+        self._init_lm_studio()
+
+    def _init_lm_studio(self):
+        """Initialize LM Studio client for local LLM via OpenAI-compatible API."""
+        self.lm_studio_available = False
+        self.lm_studio_client = None
+        
+        try:
+            if settings.USE_LOCAL_LLM:
+                import httpx
+                # Test if LM Studio is running
+                # LM_STUDIO_URL is like "http://127.0.0.1:1234/v1"
+                # Models endpoint is at /v1/models, so we need to append /models
+                models_url = f"{settings.LM_STUDIO_URL}/models"
+                print(f"[LLMService] Checking LM Studio at: {models_url}")
+                try:
+                    response = httpx.get(models_url, timeout=3.0)
+                    print(f"[LLMService] LM Studio response: {response.status_code}")
+                    if response.status_code == 200:
+                        from openai import OpenAI
+                        self.lm_studio_client = OpenAI(
+                            base_url=settings.LM_STUDIO_URL,
+                            api_key="lm-studio"  # LM Studio doesn't need a real key
+                        )
+                        self.lm_studio_available = True
+                        print(f"[LLMService] ✅ LM Studio available at {settings.LM_STUDIO_URL}")
+                    else:
+                        print(f"[LLMService] ⚠️  LM Studio returned {response.status_code} at {models_url}")
+                except Exception as e:
+                    print(f"[LLMService] ⚠️  LM Studio not running at {settings.LM_STUDIO_URL} - {e}")
+            else:
+                print("[LLMService] ℹ️  USE_LOCAL_LLM=False, LM Studio disabled")
+        except ImportError:
+            print("[LLMService] ⚠️  openai/httpx package not installed. Run: pip install openai httpx")
+        except Exception as e:
+            print(f"[LLMService] ❌ LM Studio init failed: {e}")
+
+    async def _generate_with_lm_studio(self, prompt: str, max_tokens: int = 1024, system_prompt: str = None) -> Optional[str]:
+        """Generate text using local LLM via LM Studio's OpenAI-compatible API."""
+        if not self.lm_studio_available or not self.lm_studio_client:
+            return None
+        
+        try:
+            import asyncio
+            
+            default_system = "You are a professional technical interviewer having a natural conversation. Be conversational, warm, and engaging. Always respond with valid JSON when asked for JSON."
+            
+            def call_lm_studio():
+                response = self.lm_studio_client.chat.completions.create(
+                    model=settings.LM_STUDIO_MODEL,
+                    messages=[
+                        {"role": "system", "content": system_prompt or default_system},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=max_tokens,
+                    temperature=0.7
+                )
+                return response.choices[0].message.content
+            
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(None, call_lm_studio)
+            print("[LM_STUDIO] ✅ Generation successful")
+            return result
+        except Exception as e:
+            print(f"[LM_STUDIO] ❌ Error: {e}")
+            return None
+
+    async def _try_lm_studio_conversation(
+        self,
+        answer_text: str,
+        question_text: str,
+        skill: Optional[str],
+        question_type: str,
+        jd_context: str,
+        interview_history: List[Dict[str, Any]] = None,
+        skills_unknown: List[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Generate conversation response using local LM Studio LLM."""
+        if not self.lm_studio_available:
+            return None
+        
+        # Build conversation history context
+        history_context = ""
+        if interview_history:
+            history_lines = []
+            for h in interview_history[-5:]:  # Last 5 Q&A for context
+                history_lines.append(f"Q: {h.get('question', '')[:80]}")
+                history_lines.append(f"A: {h.get('answer', '')[:120]}")
+            history_context = "\n".join(history_lines)
+        
+        prompt = f"""You are conducting a professional but CONVERSATIONAL interview. Be natural and engaging!
+
+CURRENT QUESTION: {question_text}
+SKILL: {skill or 'General'}
+TYPE: {question_type}
+
+CANDIDATE'S RESPONSE: {answer_text}
+
+{f"RECENT CONVERSATION:\\n{history_context}" if history_context else ""}
+{f"TOPICS TO SKIP (candidate doesn't know): {', '.join(skills_unknown or [])}" if skills_unknown else ""}
+
+IMPORTANT - Check these scenarios:
+1. Is candidate ASKING a question? → Answer it naturally, set answer_quality="question", next_action="answer_candidate"
+2. Is candidate saying they DON'T KNOW this topic? → Acknowledge gracefully, set answer_quality="skip_skill", next_action="end_topic"
+3. Otherwise evaluate their answer fairly
+
+Your spoken_response should be NATURAL and CONVERSATIONAL (max 40 words):
+- Acknowledge what they said
+- Give brief feedback if appropriate
+- Don't be robotic or overly formal
+
+Return ONLY valid JSON:
+{{
+    "spoken_response": "Your natural response (max 40 words)",
+    "scores": {{
+        "correctness": 0.0-5.0,
+        "depth": 0.0-5.0,
+        "clarity": 3.0,
+        "relevance": 0.0-5.0
+    }},
+    "answer_quality": "strong|partial|weak|question|skip_skill",
+    "next_action": "continue|follow_up|end_topic|answer_candidate",
+    "follow_up_question": null,
+    "skill_to_skip": null,
+    "internal_notes": "Brief note"
+}}"""
+
+        try:
+            result_text = await self._generate_with_lm_studio(prompt, max_tokens=500)
+            if not result_text:
+                return None
+            
+            # Parse JSON
+            text = result_text.strip()
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0].strip()
+            
+            result = json.loads(text)
+            result = self._validate_conversation_response(result)
+            
+            if len(result["spoken_response"]) > 200:
+                result["spoken_response"] = result["spoken_response"][:197] + "..."
+            
+            print(f"[LM_STUDIO] ✅ Conversation: {result['answer_quality']}")
+            return result
+            
+        except json.JSONDecodeError as e:
+            print(f"[LM_STUDIO] ❌ JSON parse error: {e}")
+            return None
+        except Exception as e:
+            print(f"[LM_STUDIO] ❌ Error: {e}")
+            return None
+
+    async def _generate_text_async(self, prompt: str, max_tokens: int = 1024, system_prompt: str = None) -> Optional[str]:
+        """
+        Unified generation method with provider priority:
+        1. LM Studio (Local)
+        2. Groq (Fast Fallback)
+        3. Gemini (Primary Cloud)
+        """
+        # 1. Try LM Studio
+        if settings.USE_LOCAL_LLM and self.lm_studio_available:
+            print("[LLM_SERVICE] Trying LM Studio...")
+            result = await self._generate_with_lm_studio(prompt, max_tokens, system_prompt)
+            if result:
+                return result
+            print("[LLM_SERVICE] LM Studio failed, trying next provider...")
+
+        # 2. Try Groq
+        if self.groq_available:
+            print("[LLM_SERVICE] Trying Groq...")
+            result = await self._generate_with_groq(prompt, max_tokens)
+            if result:
+                return result
+            print("[LLM_SERVICE] Groq failed, trying next provider...")
+
+        # 3. Try Gemini
+        if self.gemini_available and self.model:
+            print("[LLM_SERVICE] Trying Gemini...")
+            try:
+                import asyncio
+                # Use to_thread for the synchronous generate_content call
+                response = await asyncio.to_thread(self.model.generate_content, prompt)
+                self._record_success()
+                return response.text.strip()
+            except Exception as e:
+                print(f"[LLM_SERVICE] Gemini failed: {e}")
+                error_msg = str(e).lower()
+                if "quota" in error_msg or "rate limit" in error_msg:
+                    self._record_quota_error()
+                
+        return None
 
     async def _generate_with_groq(self, prompt: str, max_tokens: int = 1024) -> Optional[str]:
         """Generate text using Groq's Llama 3.3 70B model."""
@@ -812,7 +1008,7 @@ Return ONLY valid JSON:
     # ------------------------------------------------------------------
     # INTERVIEW PLAN
     # ------------------------------------------------------------------
-    def generate_interview_plan(
+    async def generate_interview_plan(
         self,
         jd_text: str,
         jd_skills: Dict[str, List[str]],
@@ -952,8 +1148,10 @@ Constraints:
 Ensure the JSON is valid and parseable."""
 
         try:
-            response = self.model.generate_content(prompt)
-            text = response.text.strip()
+            result_text = await self._generate_text_async(prompt)
+            if not result_text:
+                raise Exception("Generation failed on all providers")
+            text = result_text.strip()
 
             # Extract JSON from markdown code blocks if present
             if "```json" in text:
@@ -1284,46 +1482,19 @@ Focus: {plan_item['focus']}
 Return ONLY the question text."""
 
         try:
-            # Implement retry logic for rate limits
-            max_retries = 2  # Reduced from 3
-            retry_delay = 2  # Reduced from 5 seconds
+            # Use unified generator which handles LM Studio -> Groq -> Gemini
+            question = await self._generate_text_async(prompt)
+            if not question:
+                raise Exception("Generation failed on all providers")
 
-            for attempt in range(max_retries):
-                try:
-                    # Use asyncio.to_thread for async LLM call
-                    import asyncio
-                    response = await asyncio.to_thread(self.model.generate_content, prompt)
-                    question = response.text.strip().strip('"').strip("'")
+            question = question.strip().strip('"').strip("'")
+            
+            # Enforce 400 character limit for TTS API
+            if len(question) > 400:
+                print(f"[QUESTION GEN] Question too long ({len(question)} chars), truncating...")
+                question = question[:397] + "..."
 
-                    # Enforce 400 character limit for TTS API (500 char limit with buffer)
-                    if len(question) > 400:
-                        print(f"[QUESTION GEN] Question too long ({len(question)} chars), truncating...")
-                        question = question[:397] + "..."
-
-                    print(f"[QUESTION GEN] Generated ({len(question)} chars): {question[:80]}...")
-                    self._record_success()
-                    self._cache_question(plan_item, jd_text, resume_summary, question)
-                    return question
-
-                except Exception as e:
-                    error_msg = str(e).lower()
-                    if "quota" in error_msg or "rate limit" in error_msg:
-                        self._record_quota_error()
-                        if attempt < max_retries - 1:
-                            print(f"[QUESTION GEN] Rate limit hit, retrying in {retry_delay}s (attempt {attempt + 1}/{max_retries})")
-                            await asyncio.sleep(retry_delay)
-                            retry_delay = min(retry_delay * 1.5, 8)  # Gentler backoff, max 8 seconds
-                            continue
-                        else:
-                            print(f"[QUESTION GEN] Rate limit persisted after {max_retries} attempts, using fallback")
-                            break
-                    else:
-                        # Non-rate-limit error, don't retry
-                        print(f"[QUESTION GEN] Non-rate-limit error: {e}, using fallback")
-                        break
-
-            # If we get here, all retries failed or non-retryable error
-            question = self._get_fallback_question(plan_item, jd_text, resume_summary)
+            print(f"[QUESTION GEN] Generated ({len(question)} chars): {question[:80]}...")
             self._cache_question(plan_item, jd_text, resume_summary, question)
             return question
 
@@ -1425,7 +1596,7 @@ Return ONLY the question text."""
     # ------------------------------------------------------------------
     # ANSWER EVALUATION
     # ------------------------------------------------------------------
-    def evaluate_answer(
+    async def evaluate_answer(
         self,
         jd_text: str,
         question_text: str,
@@ -1473,8 +1644,10 @@ Return ONLY valid JSON:
 }}"""
 
         try:
-            response = self.model.generate_content(prompt)
-            text = response.text.strip()
+            result_text = await self._generate_text_async(prompt)
+            if not result_text:
+                raise Exception("Generation failed on all providers")
+            text = result_text.strip()
 
             # Extract JSON
             if "```json" in text:
@@ -1832,7 +2005,18 @@ Return ONLY the follow-up question text."""
         print(f"[UNIFIED] Interview history length: {len(interview_history) if interview_history else 0}")
         print(f"[UNIFIED] Skills unknown: {skills_unknown}")
         
-        # Check quota - if Gemini exhausted, try Groq first
+        # Priority 1: LM Studio (local LLM) - if enabled and available
+        if settings.USE_LOCAL_LLM and self.lm_studio_available:
+            print("[UNIFIED] Trying LM Studio (local LLM)...")
+            lm_result = await self._try_lm_studio_conversation(
+                answer_text, question_text, skill, question_type, jd_context,
+                interview_history, skills_unknown
+            )
+            if lm_result:
+                return lm_result
+            print("[UNIFIED] LM Studio failed, trying other providers...")
+        
+        # Priority 2: If Gemini quota exhausted, try Groq
         if self.consecutive_quota_errors >= 2:
             print("[UNIFIED] Gemini quota exhausted, trying Groq...")
             groq_result = await self._try_groq_conversation(
@@ -2292,7 +2476,7 @@ Respond ONLY with valid JSON (no markdown, no explanation):
     # ------------------------------------------------------------------
     # FINAL REPORT
     # ------------------------------------------------------------------
-    def generate_final_report(
+    async def generate_final_report(
         self,
         jd_text: str,
         resume_summary: Dict[str, Any],
@@ -2346,8 +2530,10 @@ Return ONLY valid JSON:
 }}"""
 
         try:
-            response = self.model.generate_content(prompt)
-            text = response.text.strip()
+            result_text = await self._generate_text_async(prompt)
+            if not result_text:
+                raise Exception("Generation failed on all providers")
+            text = result_text.strip()
 
             # Extract JSON
             if "```json" in text:
