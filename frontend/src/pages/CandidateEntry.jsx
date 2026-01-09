@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { jobService } from '../api/services'
 
 const CandidateEntry = () => {
   const navigate = useNavigate()
   const [jobCode, setJobCode] = useState('')
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -15,77 +16,118 @@ const CandidateEntry = () => {
 
     try {
       const response = await jobService.getByCode(jobCode.toUpperCase())
-      navigate(`/apply/${response.data.id}`, { 
-        state: { jobData: response.data } 
-      })
+      navigate(`/apply/${response.data.id}`)
     } catch (err) {
-      setError(err.response?.data?.detail || 'Invalid job code. Please check and try again.')
+      setError(err.response?.data?.detail || 'Job not found. Please check the code and try again.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-400 via-cyan-500 to-blue-600 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-white opacity-10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-white opacity-10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
-        <div className="absolute bottom-20 right-1/4 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
-      </div>
+    <div className="min-h-screen bg-dark relative overflow-hidden flex items-center justify-center p-6">
+      {/* Animated mesh background */}
+      <div className="absolute inset-0 bg-gradient-mesh" />
 
-      <div className="relative min-h-screen flex items-center justify-center p-4">
-        <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20">
-          {/* Icon */}
+      {/* Floating orbs */}
+      <div className="absolute top-1/4 left-10 w-80 h-80 bg-cyan/20 rounded-full blur-3xl animate-float" />
+      <div className="absolute bottom-1/4 right-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '3s' }} />
+
+      {/* Entry Card */}
+      <div className="relative w-full max-w-md">
+        {/* Glow behind card */}
+        <div className="absolute -inset-1 bg-gradient-accent rounded-3xl blur-lg opacity-30" />
+
+        <div className="relative glass rounded-3xl p-8">
+          {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
-              <span className="text-4xl">🎯</span>
+            <div className="w-20 h-20 bg-gradient-accent rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-glow-accent">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">Join Interview</h1>
-            <p className="text-white/80">Enter your job code to start the interview</p>
+            <p className="text-slate-400">Enter your job code to begin</p>
           </div>
 
+          {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-red-500/20 backdrop-blur-sm border border-red-300/30 rounded-xl text-red-100">
+            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
               {error}
             </div>
           )}
 
+          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-white font-semibold mb-2">Job Code</label>
+              <label className="block text-sm font-medium text-slate-300 mb-3 text-center">
+                Job Code
+              </label>
               <input
                 type="text"
-                required
-                maxLength={6}
-                className="w-full px-4 py-4 bg-white/20 backdrop-blur-sm border-2 border-white/30 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all text-center text-2xl font-bold uppercase tracking-widest"
-                placeholder="ABC123"
                 value={jobCode}
                 onChange={(e) => setJobCode(e.target.value.toUpperCase())}
+                className="input-field text-center text-2xl font-mono tracking-widest uppercase"
+                placeholder="XXXXXX"
+                maxLength={6}
+                required
               />
-              <p className="text-white/70 text-sm mt-2 text-center">Enter the 6-character code provided by HR</p>
+              <p className="text-xs text-slate-500 text-center mt-2">
+                Enter the 6-character code provided by HR
+              </p>
             </div>
 
             <button
               type="submit"
               disabled={loading || jobCode.length < 6}
-              className="w-full py-4 bg-white text-blue-600 rounded-xl hover:bg-blue-50 transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-accent py-4 rounded-2xl font-semibold text-lg text-white
+                shadow-glow-accent hover:shadow-[0_0_50px_rgba(245,158,11,0.5)] 
+                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
-                <span className="flex items-center justify-center space-x-2">
-                  <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  <span>Verifying...</span>
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Finding Job...
                 </span>
               ) : (
-                'Continue to Application'
+                <span className="flex items-center justify-center gap-2">
+                  <span>Continue</span>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </span>
               )}
             </button>
           </form>
 
-          <div className="mt-8 text-center">
-            <p className="text-white/70 text-sm">
-              Don't have a code? Contact the hiring team.
-            </p>
+          {/* Instructions */}
+          <div className="mt-8 p-4 rounded-xl bg-dark-card/50 border border-slate-700">
+            <h3 className="text-sm font-semibold text-slate-300 mb-3">📋 Before you begin:</h3>
+            <ul className="text-xs text-slate-400 space-y-2">
+              <li className="flex items-start gap-2">
+                <span className="text-green-400">✓</span>
+                Ensure you're in a quiet environment
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-green-400">✓</span>
+                Have your microphone ready
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-green-400">✓</span>
+                Keep your resume details handy
+              </li>
+            </ul>
+          </div>
+
+          {/* Back to home */}
+          <div className="mt-6 text-center">
+            <Link to="/" className="text-sm text-slate-500 hover:text-slate-300 transition-colors">
+              ← Back to Home
+            </Link>
           </div>
         </div>
       </div>
