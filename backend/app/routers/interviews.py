@@ -120,7 +120,7 @@ async def start_interview(
     skill_gap = parsing_service.analyze_skill_gap(jd_parsed, resume_parsed)
     
     # Generate interview plan
-    interview_plan = llm_service.generate_interview_plan(
+    interview_plan = await llm_service.generate_interview_plan(
         job.jd_raw_text,
         {
             "must_have": job.must_have_skills,
@@ -141,6 +141,8 @@ async def start_interview(
     session.started_at = datetime.utcnow()
     
     db.commit()
+    db.refresh(session)
+    print(f"[START INTERVIEW] Session {session_id} status updated to: {session.status}")
     
     return InterviewStartResponse(
         session_id=session.id,
@@ -165,10 +167,12 @@ async def get_next_question(
             detail="Interview session not found"
         )
     
+    print(f"[NEXT QUESTION] Request for session {session_id}. Current status: {session.status}")
     if session.status != InterviewStatus.IN_PROGRESS:
+        print(f"[NEXT QUESTION] ❌ FAILED: Status is {session.status}, expected {InterviewStatus.IN_PROGRESS}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Interview not in progress"
+            detail=f"Interview not in progress (Current status: {session.status})"
         )
     
     # Get session_metadata
@@ -187,7 +191,7 @@ async def get_next_question(
     # Check if interview is complete (either plan finished OR max questions reached)
     if current_index >= len(interview_plan) or questions_asked >= MAX_QUESTIONS:
         # Finalize interview
-        finalize_interview(session, db)
+        await finalize_interview(session, db)
         
         # Return a special response indicating completion
         return QuestionResponse(
@@ -385,7 +389,7 @@ async def submit_code_answer(
     candidate = session.candidate
     job = candidate.job
     
-    evaluation = llm_service.evaluate_answer(
+    evaluation = await llm_service.evaluate_answer(
         job.jd_raw_text,
         question.question_text,
         f"Code Solution:\n{code_text}",
@@ -418,7 +422,7 @@ async def submit_code_answer(
     is_complete = question.index >= len(interview_plan)
     
     if is_complete:
-        finalize_interview(session, db)
+        await finalize_interview(session, db)
     
     return AnswerEvaluation(
         correctness=evaluation["correctness"],
@@ -497,7 +501,7 @@ async def submit_text_answer(
     candidate = session.candidate
     job = candidate.job
     
-    evaluation = llm_service.evaluate_answer(
+    evaluation = await llm_service.evaluate_answer(
         job.jd_raw_text,
         question.question_text,
         transcript,
@@ -530,7 +534,7 @@ async def submit_text_answer(
     is_complete = question.index >= len(interview_plan)
     
     if is_complete:
-        finalize_interview(session, db)
+        await finalize_interview(session, db)
     
     return AnswerEvaluation(
         correctness=evaluation["correctness"],
@@ -605,7 +609,7 @@ async def submit_answer(
     candidate = session.candidate
     job = candidate.job
     
-    evaluation = llm_service.evaluate_answer(
+    evaluation = await llm_service.evaluate_answer(
         job.jd_raw_text,
         question.question_text,
         transcript,
@@ -638,7 +642,7 @@ async def submit_answer(
     is_complete = question.index >= len(interview_plan)
     
     if is_complete:
-        finalize_interview(session, db)
+        await finalize_interview(session, db)
     
     return AnswerEvaluation(
         correctness=evaluation["correctness"],
@@ -823,7 +827,7 @@ async def process_conversation(
     is_complete = is_last_question
     
     if is_complete:
-        finalize_interview(session, db)
+        await finalize_interview(session, db)
     elif llm_response["next_action"] in ["continue", "end_topic", "answer_candidate"]:
         # Generate next question from plan (skip if skill is in skills_unknown)
         next_index = question.index + 1
@@ -832,7 +836,8 @@ async def process_conversation(
         # Find next plan item that's not in skills_unknown
         while next_index <= len(interview_plan):
             plan_item = interview_plan[next_index - 1]
-            plan_skill = plan_item.get("skill", "").lower()
+            plan_skill = plan_item.get("skill") or ""  # Handle None
+            plan_skill = plan_skill.lower() if plan_skill else ""
             
             # Check if this skill should be skipped
             skip_this = any(
@@ -884,7 +889,7 @@ async def process_conversation(
         else:
             # Reached end of plan
             is_complete = True
-            finalize_interview(session, db)
+            await finalize_interview(session, db)
     
     db.commit()
     
@@ -903,7 +908,7 @@ async def process_conversation(
     )
 
 
-def finalize_interview(session: InterviewSession, db: Session):
+async def finalize_interview(session: InterviewSession, db: Session):
     """Finalize interview and generate report."""
     # Get all questions and answers
     questions = db.query(InterviewQuestion).filter(
@@ -944,7 +949,7 @@ def finalize_interview(session: InterviewSession, db: Session):
     job = candidate.job
     resume_parsed = candidate.resume_parsed_json
     
-    report_data = llm_service.generate_final_report(
+    report_data = await llm_service.generate_final_report(
         job.jd_raw_text,
         resume_parsed,
         evaluations,
@@ -1219,7 +1224,7 @@ async def end_interview_early(
         return {"message": "Interview already completed"}
     
     # Finalize with current answers
-    finalize_interview(session, db)
+    await finalize_interview(session, db)
     
     return {
         "message": "Interview ended successfully",
