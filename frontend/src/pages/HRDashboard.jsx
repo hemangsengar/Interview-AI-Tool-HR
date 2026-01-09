@@ -8,9 +8,7 @@ const HRDashboard = () => {
   const logout = useAuthStore(state => state.logout)
   const token = localStorage.getItem('token')
 
-  if (!token) {
-    return <Navigate to="/hr/login" replace />
-  }
+
 
   const [showCreateJob, setShowCreateJob] = useState(false)
   const [formData, setFormData] = useState({
@@ -49,6 +47,10 @@ const HRDashboard = () => {
       const errorMsg = err.response?.data?.detail || err.message || 'Failed to create job. Please try again.'
       alert(errorMsg)
     }
+  }
+
+  if (!token) {
+    return <Navigate to="/hr/login" replace />
   }
 
   return (

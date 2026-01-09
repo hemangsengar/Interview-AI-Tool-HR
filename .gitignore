@@ -47,7 +47,7 @@ frontend/dist/
 frontend/build/
 
 # IDE
-.vscode/
+
 .idea/
 *.swp
 *.swo

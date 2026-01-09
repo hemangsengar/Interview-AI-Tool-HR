@@ -110,7 +110,7 @@ const CandidateEntry = () => {
             <ul className="text-xs text-slate-400 space-y-2">
               <li className="flex items-start gap-2">
                 <span className="text-green-400">✓</span>
-                Ensure you're in a quiet environment
+                Ensure you&apos;re in a quiet environment
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-green-400">✓</span>

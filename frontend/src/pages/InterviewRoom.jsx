@@ -11,7 +11,6 @@ const InterviewRoom = () => {
   const [avatarState, setAvatarState] = useState('idle')
   const [subtitle, setSubtitle] = useState('')
   const [status, setStatus] = useState('Not Started')
-  const [currentQuestion, setCurrentQuestion] = useState(null)
   const [isRecording, setIsRecording] = useState(false)
   const [interviewStarted, setInterviewStarted] = useState(false)
   const [interviewComplete, setInterviewComplete] = useState(false)
@@ -30,19 +29,13 @@ const InterviewRoom = () => {
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
   const audioRef = useRef(new Audio())
-  const transcriptChunksRef = useRef([]) // Store transcripts from each chunk
-  const recordingStartTimeRef = useRef(null) // Track when recording started
-  const audioContextRef = useRef(null) // For WAV conversion
   const mediaStreamRef = useRef(null) // Store media stream
   const videoRef = useRef(null) // For welcome screen preview
   const interviewVideoRef = useRef(null) // For interview screen
   const videoRecorderRef = useRef(null)
   const videoChunksRef = useRef([])
   const recordedVideoBlob = useRef(null)
-  const silenceTimerRef = useRef(null) // For silence detection
-  const analyserRef = useRef(null) // For audio analysis
-  const silenceStartRef = useRef(null) // When silence started
-  const hasSpokenRef = useRef(false) // Track if user has spoken
+
 
   useEffect(() => {
     // Request microphone and camera permission on mount
@@ -321,7 +314,6 @@ const InterviewRoom = () => {
           console.log('Response:', JSON.stringify(response.data, null, 2))
 
           // Show success alert
-          const path = response.data.path || 'backend/uploads'
           setRecordingStatus(`✅ Video Saved`)
           setTimeout(() => setShowRecordingAlert(false), 3000)
 
@@ -952,28 +944,8 @@ const InterviewRoom = () => {
     }
   }
 
-  const submitTranscript = async (transcriptText) => {
-    try {
-      setAvatarState('thinking')
-      setStatus('Evaluating your answer...')
-      setSubtitle('')
-      setShowCodeEditor(false)
 
-      // Submit transcript as text answer
-      const response = await interviewService.submitTextAnswer(sessionId, transcriptText)
-      const evaluation = response.data
 
-      if (evaluation.is_interview_complete) {
-        handleInterviewComplete()
-      } else {
-        await getNextQuestion()
-      }
-    } catch (err) {
-      setError('Failed to submit answer')
-      setAvatarState('idle')
-      setStatus('Error - Please try again')
-    }
-  }
 
 
 
@@ -1049,7 +1021,7 @@ const InterviewRoom = () => {
               </div>
               <h1 className="text-4xl font-bold mb-4 text-white">Welcome to Your Interview</h1>
               <p className="text-slate-400 mb-6 text-lg max-w-2xl mx-auto">
-                You'll be interviewed by an AI interviewer. The interview will cover your skills and experience.
+                You&apos;ll be interviewed by an AI interviewer. The interview will cover your skills and experience.
                 Your video will be recorded for authenticity. Speak clearly and take your time with each answer.
               </p>
 
@@ -1093,7 +1065,7 @@ const InterviewRoom = () => {
               {selectedInterviewer && (
                 <div className="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-xl max-w-md mx-auto">
                   <p className="text-green-400 font-semibold">
-                    ✅ You'll be interviewed by {selectedInterviewer === 'aarush' ? 'Aarush 👨‍💼' : 'Aarushi 👩‍💼'}
+                    ✅ You&apos;ll be interviewed by {selectedInterviewer === 'aarush' ? 'Aarush 👨‍💼' : 'Aarushi 👩‍💼'}
                   </p>
                 </div>
               )}
@@ -1257,7 +1229,7 @@ const InterviewRoom = () => {
                           className="px-12 py-4 bg-red-600 text-white rounded-2xl font-bold text-xl hover:bg-red-700 shadow-glow-secondary transform hover:scale-105 transition-all flex items-center justify-center space-x-3 mx-auto"
                         >
                           <span className="text-2xl">⏹</span>
-                          <span>I'M DONE SPEAKING</span>
+                          <span>I&apos;M DONE SPEAKING</span>
                         </button>
                         <p className="text-sm text-red-400 font-medium mt-4 animate-pulse">
                           ● Recording your answer...

@@ -86,7 +86,7 @@ const Landing = () => {
               <div className="text-4xl mb-4 group-hover:scale-110 transition-transform">🤖</div>
               <h3 className="text-xl font-bold text-white mb-2">AI-Powered</h3>
               <p className="text-slate-400">
-                Smart questions adapted to each candidate's unique profile and experience
+                Smart questions adapted to each candidate&apos;s unique profile and experience
               </p>
             </div>
 

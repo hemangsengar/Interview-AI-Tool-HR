@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useQuery, useMutation } from 'react-query'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { jobService } from '../api/services'
 
 const JobDetails = () => {
   const { jobId } = useParams()
-  const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [deleteJobConfirm, setDeleteJobConfirm] = useState(false)
@@ -228,9 +227,9 @@ const JobDetails = () => {
                       <td className="px-4 py-4">
                         {candidate.final_recommendation ? (
                           <span className={`px-3 py-1 rounded-lg text-sm font-semibold ${candidate.final_recommendation === 'Strong' ? 'bg-green-500/20 text-green-400' :
-                              candidate.final_recommendation === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                                candidate.final_recommendation === 'Weak' ? 'bg-orange-500/20 text-orange-400' :
-                                  'bg-red-500/20 text-red-400'
+                            candidate.final_recommendation === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                              candidate.final_recommendation === 'Weak' ? 'bg-orange-500/20 text-orange-400' :
+                                'bg-red-500/20 text-red-400'
                             }`}>
                             {candidate.final_recommendation}
                           </span>
@@ -240,8 +239,8 @@ const JobDetails = () => {
                       </td>
                       <td className="px-4 py-4">
                         <span className={`px-3 py-1 rounded-lg text-sm font-semibold ${candidate.status === 'Shortlisted' ? 'bg-green-500/20 text-green-400' :
-                            candidate.status === 'Rejected' ? 'bg-red-500/20 text-red-400' :
-                              'bg-yellow-500/20 text-yellow-400'
+                          candidate.status === 'Rejected' ? 'bg-red-500/20 text-red-400' :
+                            'bg-yellow-500/20 text-yellow-400'
                           }`}>
                           {candidate.status || 'Pending'}
                         </span>

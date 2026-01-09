@@ -114,7 +114,7 @@ const HRLogin = () => {
           {/* Footer */}
           <div className="mt-8 text-center">
             <p className="text-slate-400">
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <Link to="/hr/signup" className="text-primary-light hover:text-primary transition-colors font-medium">
                 Create one
               </Link>
