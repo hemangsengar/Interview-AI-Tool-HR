@@ -7,14 +7,12 @@ import os
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
     
-    # Database - SQLite by default, PostgreSQL in production
-    DATABASE_URL: str = "sqlite:///./interview.db"
+    # Database - In-memory SQLite for demo (resets on restart)
+    # Use "sqlite:///./interview.db" for persistent storage
+    DATABASE_URL: str = "sqlite:///:memory:"
     
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # Fix postgres:// to postgresql:// for SQLAlchemy
-        if self.DATABASE_URL.startswith("postgres://"):
-            self.DATABASE_URL = self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    # Demo mode - auto-populate with sample data on startup
+    DEMO_MODE: bool = True
     
     # Security
     SECRET_KEY: str = "dev-secret-key-change-in-production"

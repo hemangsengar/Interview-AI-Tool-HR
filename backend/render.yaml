@@ -7,8 +7,11 @@ services:
       pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
+      # Database - Using in-memory SQLite for demo (no PostgreSQL needed)
       - key: DATABASE_URL
-        sync: false
+        value: "sqlite:///:memory:"
+      - key: DEMO_MODE
+        value: "true"
       - key: SARVAM_API_KEY
         sync: false
       - key: SARVAM_STT_URL
@@ -26,7 +29,9 @@ services:
       mountPath: /opt/render/project/src/uploads
       sizeGB: 1
 
-databases:
-  - name: interview-db
-    databaseName: interview_db
-    user: interview_user
+# PostgreSQL database removed - using in-memory SQLite for demo
+# Uncomment below if you need persistent PostgreSQL storage:
+# databases:
+#   - name: interview-db
+#     databaseName: interview_db
+#     user: interview_user

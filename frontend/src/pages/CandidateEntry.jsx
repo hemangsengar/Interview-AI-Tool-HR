@@ -123,6 +123,46 @@ const CandidateEntry = () => {
             </ul>
           </div>
 
+          {/* Demo Job Codes */}
+          <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-cyan/10 to-primary/10 border border-cyan/20">
+            <h3 className="text-sm font-semibold text-cyan mb-3">🎯 Demo Job Codes (Try Now!)</h3>
+            <div className="grid grid-cols-1 gap-2">
+              <button
+                type="button"
+                onClick={() => setJobCode('PY2024')}
+                className="flex items-center justify-between p-2 rounded-lg bg-dark/50 hover:bg-dark/80 border border-slate-700 hover:border-cyan/50 transition-all group"
+              >
+                <div className="text-left">
+                  <span className="text-xs text-slate-400">Senior Python Developer</span>
+                </div>
+                <span className="font-mono text-sm text-cyan group-hover:text-white transition-colors">PY2024</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setJobCode('JS2024')}
+                className="flex items-center justify-between p-2 rounded-lg bg-dark/50 hover:bg-dark/80 border border-slate-700 hover:border-cyan/50 transition-all group"
+              >
+                <div className="text-left">
+                  <span className="text-xs text-slate-400">Full Stack JS Developer</span>
+                </div>
+                <span className="font-mono text-sm text-cyan group-hover:text-white transition-colors">JS2024</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setJobCode('DS2024')}
+                className="flex items-center justify-between p-2 rounded-lg bg-dark/50 hover:bg-dark/80 border border-slate-700 hover:border-cyan/50 transition-all group"
+              >
+                <div className="text-left">
+                  <span className="text-xs text-slate-400">Data Scientist - ML</span>
+                </div>
+                <span className="font-mono text-sm text-cyan group-hover:text-white transition-colors">DS2024</span>
+              </button>
+            </div>
+            <p className="text-xs text-slate-500 mt-2 text-center">
+              Click any code above to auto-fill
+            </p>
+          </div>
+
           {/* Back to home */}
           <div className="mt-6 text-center">
             <Link to="/" className="text-sm text-slate-500 hover:text-slate-300 transition-colors">
