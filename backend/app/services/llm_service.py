@@ -707,6 +707,10 @@ class LLMService:
                 history_lines.append(f"A: {h.get('answer', '')[:120]}")
             history_context = "\n".join(history_lines)
         
+        history_section = ""
+        if history_context:
+            history_section = f"RECENT CONVERSATION:\n{history_context}"
+        
         prompt = f"""You are conducting a professional but CONVERSATIONAL interview. Be natural and engaging!
 
 CURRENT QUESTION: {question_text}
@@ -715,7 +719,7 @@ TYPE: {question_type}
 
 CANDIDATE'S RESPONSE: {answer_text}
 
-{f"RECENT CONVERSATION:\\n{history_context}" if history_context else ""}
+{history_section}
 {f"TOPICS TO SKIP (candidate doesn't know): {', '.join(skills_unknown or [])}" if skills_unknown else ""}
 
 IMPORTANT - Check these scenarios:
@@ -868,6 +872,11 @@ Return ONLY valid JSON:
                 history_lines.append(f"A: {h.get('answer', '')[:150]}")
             history_context = "\n".join(history_lines)
         
+        if history_context:
+            history_section = f"CONVERSATION HISTORY (ALL previous Q&A):\n{history_context}"
+        else:
+            history_section = "(This is the first question)"
+
         prompt = f"""You are a professional technical interviewer having a NATURAL conversation.
 
 QUESTION ASKED: {question_text}
@@ -876,7 +885,7 @@ QUESTION TYPE: {question_type}
 
 CANDIDATE'S ANSWER: {answer_text}
 
-{f"CONVERSATION HISTORY (ALL previous Q&A):\n{history_context}" if history_context else "(This is the first question)"}
+{history_section}
 
 {f"SKILLS CANDIDATE ALREADY SAID THEY DON'T KNOW: {', '.join(skills_unknown or [])}" if skills_unknown else ""}
 
@@ -2039,6 +2048,11 @@ Return ONLY the follow-up question text."""
                 history_lines.append(f"A: {h.get('answer', '')[:150]}")
             history_context = "\n".join(history_lines)
 
+        if history_context:
+            history_section = f"CONVERSATION HISTORY (ALL previous Q&A):\n{history_context}"
+        else:
+            history_section = "(This is the first question)"
+
         prompt = f"""You are a professional technical interviewer having a NATURAL conversation with a candidate.
 
 CURRENT QUESTION: {question_text}
@@ -2050,7 +2064,7 @@ CANDIDATE'S ANSWER: {answer_text}
 JOB CONTEXT (relevant skills needed):
 {jd_context[:400]}
 
-{f"CONVERSATION HISTORY (ALL previous Q&A):\n{history_context}" if history_context else "(This is the first question)"}
+{history_section}
 
 {f"SKILLS CANDIDATE SAID THEY DON'T KNOW: {', '.join(skills_unknown or [])}" if skills_unknown else ""}
 
