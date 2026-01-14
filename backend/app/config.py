@@ -25,6 +25,14 @@ class Settings(BaseSettings):
     # Groq (Free fallback LLM - very fast)
     GROQ_API_KEY: str = ""
     
+    # Anthropic Claude
+    ANTHROPIC_API_KEY: str = ""
+    ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"  # or "claude-3-5-haiku-20241022" for faster/cheaper
+    
+    # Primary LLM Provider: "anthropic", "gemini", "groq", or "local"
+    # Set this to switch the primary AI provider easily
+    PRIMARY_LLM_PROVIDER: str = "anthropic"
+    
     # LM Studio (Local LLM via OpenAI-compatible API)
     LM_STUDIO_URL: str = "http://127.0.0.1:1234"  # Default LM Studio URL (no trailing slash)
     LM_STUDIO_MODEL: str = "local-model"  # Model name in LM Studio

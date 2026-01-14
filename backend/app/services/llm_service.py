@@ -530,12 +530,15 @@ class LLMService:
 
     def __init__(self):
         """
-        Initialize LLM service with Gemini primary + Groq fallback.
+        Initialize LLM service with configurable provider priority.
         
-        Provider priority:
-        1. Google Gemini (primary)
-        2. Groq (free, very fast fallback)
-        3. Heuristic fallback (offline)
+        Provider priority (configurable via PRIMARY_LLM_PROVIDER):
+        - "anthropic": Anthropic Claude (recommended)
+        - "gemini": Google Gemini
+        - "groq": Groq Llama 3.3 70B (free, fast)
+        - "local": LM Studio local LLM
+        
+        Fallback chain: PRIMARY → other providers → heuristic
         """
         # Quota tracking
         self.quota_errors = 0
@@ -545,7 +548,9 @@ class LLMService:
         # Provider state
         self.gemini_available = False
         self.groq_available = False
+        self.anthropic_available = False
         self.groq_client = None
+        self.anthropic_client = None
 
         # Caching for interview plans and questions
         self.plan_cache = {}  # Cache interview plans by JD hash
@@ -616,8 +621,29 @@ class LLMService:
             print(f"[LLMService] ❌ Groq init failed: {e}")
             self.groq_available = False
         
+        # Initialize Anthropic Claude
+        self._init_anthropic()
+        
         # Initialize LM Studio (Local LLM)
         self._init_lm_studio()
+
+    def _init_anthropic(self):
+        """Initialize Anthropic Claude client if API key is available."""
+        try:
+            if settings.ANTHROPIC_API_KEY:
+                from anthropic import Anthropic
+                self.anthropic_client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+                self.anthropic_available = True
+                print(f"[LLMService] ✅ Anthropic Claude available ({settings.ANTHROPIC_MODEL})")
+            else:
+                print("[LLMService] ⚠️  ANTHROPIC_API_KEY not set, Anthropic disabled")
+                self.anthropic_available = False
+        except ImportError:
+            print("[LLMService] ⚠️  anthropic package not installed. Run: pip install anthropic")
+            self.anthropic_available = False
+        except Exception as e:
+            print(f"[LLMService] ❌ Anthropic init failed: {e}")
+            self.anthropic_available = False
 
     def _init_lm_studio(self):
         """Initialize LM Studio client for local LLM via OpenAI-compatible API."""
@@ -847,6 +873,142 @@ Return ONLY valid JSON:
                 print(f"[GROQ] ⚠️  Rate limit hit: {e}")
             else:
                 print(f"[GROQ] ❌ Error: {e}")
+            return None
+
+    async def _generate_with_anthropic(self, prompt: str, max_tokens: int = 1024, system_prompt: str = None) -> Optional[str]:
+        """Generate text using Anthropic Claude."""
+        if not self.anthropic_available or not self.anthropic_client:
+            return None
+        
+        try:
+            import asyncio
+            
+            default_system = "You are a professional technical interviewer. Always respond with valid JSON when asked."
+            
+            # Anthropic is synchronous, run in executor
+            def call_anthropic():
+                response = self.anthropic_client.messages.create(
+                    model=settings.ANTHROPIC_MODEL,
+                    max_tokens=max_tokens,
+                    system=system_prompt or default_system,
+                    messages=[
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                return response.content[0].text
+            
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(None, call_anthropic)
+            print("[ANTHROPIC] ✅ Generation successful")
+            return result
+        except Exception as e:
+            error_str = str(e).lower()
+            if "rate" in error_str or "limit" in error_str:
+                print(f"[ANTHROPIC] ⚠️  Rate limit hit: {e}")
+            else:
+                print(f"[ANTHROPIC] ❌ Error: {e}")
+            return None
+
+    async def _try_anthropic_conversation(
+        self,
+        answer_text: str,
+        question_text: str,
+        skill: Optional[str],
+        question_type: str,
+        jd_context: str,
+        interview_history: List[Dict[str, Any]] = None,
+        skills_unknown: List[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Generate conversation response using Anthropic Claude with full context."""
+        if not self.anthropic_available:
+            return None
+        
+        # Build conversation history context
+        history_context = ""
+        if interview_history:
+            history_lines = []
+            for h in interview_history[-5:]:  # Last 5 Q&A for context
+                history_lines.append(f"Q ({h.get('skill', 'unknown')}): {h.get('question', '')[:100]}")
+                history_lines.append(f"A: {h.get('answer', '')[:150]}")
+            history_context = "\n".join(history_lines)
+        
+        if history_context:
+            history_section = f"CONVERSATION HISTORY (recent Q&A):\n{history_context}"
+        else:
+            history_section = "(This is the first question)"
+
+        prompt = f"""You are a professional technical interviewer having a NATURAL conversation.
+
+QUESTION ASKED: {question_text}
+SKILL BEING ASSESSED: {skill or 'General'}
+QUESTION TYPE: {question_type}
+
+CANDIDATE'S ANSWER: {answer_text}
+
+{history_section}
+
+{f"SKILLS CANDIDATE ALREADY SAID THEY DON'T KNOW: {', '.join(skills_unknown or [])}" if skills_unknown else ""}
+
+CRITICAL DETECTION - Check these FIRST:
+1. IS CANDIDATE ASKING A QUESTION? (e.g., "Can you tell me about the job role?", "What kind of work?", "Could you clarify?")
+   → If YES: Set answer_quality="question", next_action="answer_candidate", and ANSWER their question in spoken_response!
+   
+2. IS CANDIDATE SAYING THEY DON'T KNOW THIS SKILL? (e.g., "I don't have experience in...", "I haven't worked with...")
+   → If YES: Set answer_quality="skip_skill", next_action="end_topic", skill_to_skip="{skill}"
+   → spoken_response: "No problem, let's move on to something else."
+   
+3. HAS CANDIDATE ALREADY ANSWERED THIS? (Check conversation history!)
+   → If YES: Don't ask the same thing. Set next_action="continue" to move forward.
+
+INSTRUCTIONS FOR spoken_response (MAX 40 WORDS):
+- If answer was good: Brief acknowledgment
+- If answer was weak: Encouraging, move on
+- If candidate asked a question: ANSWER IT
+- If candidate doesn't know the skill: Accept gracefully
+- Sound natural, like a real human
+
+Return ONLY valid JSON:
+{{
+    "spoken_response": "Your natural spoken response (MAX 40 words)",
+    "scores": {{
+        "correctness": 0.0-5.0,
+        "depth": 0.0-5.0,
+        "clarity": 3.0,
+        "relevance": 0.0-5.0
+    }},
+    "answer_quality": "strong|partial|weak|question|skip_skill",
+    "next_action": "continue|follow_up|end_topic|answer_candidate",
+    "follow_up_question": "Only if next_action is follow_up, otherwise null",
+    "skill_to_skip": "Skill name if candidate doesn't know it, otherwise null",
+    "internal_notes": "Brief evaluation"
+}}"""
+
+        try:
+            result_text = await self._generate_with_anthropic(prompt, max_tokens=500)
+            if not result_text:
+                return None
+            
+            # Parse JSON
+            text = result_text.strip()
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0].strip()
+            
+            result = json.loads(text)
+            result = self._validate_conversation_response(result)
+            
+            if len(result["spoken_response"]) > 200:
+                result["spoken_response"] = result["spoken_response"][:197] + "..."
+            
+            print(f"[ANTHROPIC] ✅ Conversation response: {result['answer_quality']}")
+            return result
+            
+        except json.JSONDecodeError as e:
+            print(f"[ANTHROPIC] ❌ JSON parse error: {e}")
+            return None
+        except Exception as e:
+            print(f"[ANTHROPIC] ❌ Error: {e}")
             return None
 
     async def _try_groq_conversation(
@@ -2013,31 +2175,54 @@ Return ONLY the follow-up question text."""
         print(f"[UNIFIED] Processing answer for skill: {skill}, type: {question_type}")
         print(f"[UNIFIED] Interview history length: {len(interview_history) if interview_history else 0}")
         print(f"[UNIFIED] Skills unknown: {skills_unknown}")
+        print(f"[UNIFIED] Primary provider: {settings.PRIMARY_LLM_PROVIDER}")
         
-        # Priority 1: LM Studio (local LLM) - if enabled and available
-        if settings.USE_LOCAL_LLM and self.lm_studio_available:
-            print("[UNIFIED] Trying LM Studio (local LLM)...")
-            lm_result = await self._try_lm_studio_conversation(
-                answer_text, question_text, skill, question_type, jd_context,
-                interview_history, skills_unknown
-            )
-            if lm_result:
-                return lm_result
-            print("[UNIFIED] LM Studio failed, trying other providers...")
+        # Helper function to try each provider
+        async def try_provider(provider_name: str) -> Optional[Dict[str, Any]]:
+            if provider_name == "local" and settings.USE_LOCAL_LLM and self.lm_studio_available:
+                print(f"[UNIFIED] Trying LM Studio (local LLM)...")
+                return await self._try_lm_studio_conversation(
+                    answer_text, question_text, skill, question_type, jd_context,
+                    interview_history, skills_unknown
+                )
+            elif provider_name == "anthropic" and self.anthropic_available:
+                print(f"[UNIFIED] Trying Anthropic Claude...")
+                return await self._try_anthropic_conversation(
+                    answer_text, question_text, skill, question_type, jd_context,
+                    interview_history, skills_unknown
+                )
+            elif provider_name == "groq" and self.groq_available:
+                print(f"[UNIFIED] Trying Groq...")
+                return await self._try_groq_conversation(
+                    answer_text, question_text, skill, question_type, jd_context,
+                    interview_history, skills_unknown
+                )
+            elif provider_name == "gemini" and self.gemini_available:
+                # Gemini uses the main Gemini flow below (not a dedicated conversation method)
+                return None
+            return None
         
-        # Priority 2: If Gemini quota exhausted, try Groq
-        if self.consecutive_quota_errors >= 2:
-            print("[UNIFIED] Gemini quota exhausted, trying Groq...")
-            groq_result = await self._try_groq_conversation(
-                answer_text, question_text, skill, question_type, jd_context,
-                interview_history, skills_unknown
-            )
-            if groq_result:
-                return groq_result
-            print("[UNIFIED] Groq also failed, using heuristic fallback")
-            return self._get_fallback_conversation_response(
-                answer_text, question_text, skill, question_type, interview_history
-            )
+        # Build fallback order based on PRIMARY_LLM_PROVIDER
+        all_providers = ["anthropic", "groq", "gemini", "local"]
+        primary = settings.PRIMARY_LLM_PROVIDER.lower()
+        
+        # Primary provider first, then others as fallback
+        if primary in all_providers:
+            fallback_order = [primary] + [p for p in all_providers if p != primary]
+        else:
+            fallback_order = all_providers  # Default order if invalid primary
+        
+        # Try each provider in order
+        for provider in fallback_order:
+            if provider == "gemini":
+                # Gemini is handled below with the full prompt
+                continue
+            result = await try_provider(provider)
+            if result:
+                return result
+            print(f"[UNIFIED] {provider} failed or unavailable, trying next...")
+        
+        # If all dedicated conversation methods failed, try Gemini with full prompt
         
         # Build conversation history context
         history_context = ""
