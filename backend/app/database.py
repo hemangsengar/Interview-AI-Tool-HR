@@ -66,9 +66,9 @@ def _init_demo_data():
     print("[DEMO] Starting demo data initialization...")
     
     from .models import User, Job
-    from passlib.context import CryptContext
-    
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    # Use the app's auth hashing function properly
+    # Import inside function to avoid circular imports
+    from .auth import hash_password
     
     db = SessionLocal()
     try:
@@ -93,7 +93,7 @@ def _init_demo_data():
             demo_user = User(
                 name="Demo HR Manager",
                 email="demo@interview.ai",
-                password_hash=pwd_context.hash("demo123"),
+                password_hash=hash_password("demo123"),
                 role="hr"
             )
             db.add(demo_user)
