@@ -621,11 +621,33 @@ class LLMService:
             print(f"[LLMService] ❌ Groq init failed: {e}")
             self.groq_available = False
         
-        # Initialize Anthropic Claude
+        # Initialize HuggingFace (Primary)
+        self._init_huggingface()
+        
+        # Initialize Anthropic Claude (Fallback)
         self._init_anthropic()
         
-        # Initialize LM Studio (Local LLM)
-        self._init_lm_studio()
+        # LM Studio disabled by default
+        self.lm_studio_available = False
+        self.lm_studio_client = None
+
+    def _init_huggingface(self):
+        """Initialize HuggingFace Inference client if API key is available."""
+        self.huggingface_available = False
+        self.hf_client = None
+        
+        try:
+            if settings.HUGGINGFACE_API_KEY:
+                from huggingface_hub import InferenceClient
+                self.hf_client = InferenceClient(token=settings.HUGGINGFACE_API_KEY)
+                self.huggingface_available = True
+                print(f"[LLMService] ✅ HuggingFace available ({settings.HUGGINGFACE_MODEL})")
+            else:
+                print("[LLMService] ⚠️  HUGGINGFACE_API_KEY not set, HuggingFace disabled")
+        except ImportError:
+            print("[LLMService] ⚠️  huggingface_hub package not installed. Run: pip install huggingface_hub")
+        except Exception as e:
+            print(f"[LLMService] ❌ HuggingFace init failed: {e}")
 
     def _init_anthropic(self):
         """Initialize Anthropic Claude client if API key is available."""
@@ -875,6 +897,43 @@ Return ONLY valid JSON:
                 print(f"[GROQ] ❌ Error: {e}")
             return None
 
+    async def _generate_with_huggingface(self, prompt: str, max_tokens: int = 1024, system_prompt: str = None) -> Optional[str]:
+        """Generate text using HuggingFace Inference API."""
+        if not self.huggingface_available or not self.hf_client:
+            return None
+        
+        try:
+            import asyncio
+            
+            default_system = "You are a professional technical interviewer. Always respond with valid JSON when asked."
+            
+            messages = [
+                {"role": "system", "content": system_prompt or default_system},
+                {"role": "user", "content": prompt}
+            ]
+            
+            # HuggingFace InferenceClient is synchronous, run in executor
+            def call_huggingface():
+                response = self.hf_client.chat.completions.create(
+                    model=settings.HUGGINGFACE_MODEL,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=0.7
+                )
+                return response.choices[0].message.content
+            
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(None, call_huggingface)
+            print("[HUGGINGFACE] ✅ Generation successful")
+            return result
+        except Exception as e:
+            error_str = str(e).lower()
+            if "rate" in error_str or "limit" in error_str or "429" in str(e):
+                print(f"[HUGGINGFACE] ⚠️  Rate limit hit: {e}")
+            else:
+                print(f"[HUGGINGFACE] ❌ Error: {e}")
+            return None
+
     async def _generate_with_anthropic(self, prompt: str, max_tokens: int = 1024, system_prompt: str = None) -> Optional[str]:
         """Generate text using Anthropic Claude."""
         if not self.anthropic_available or not self.anthropic_client:
@@ -907,6 +966,108 @@ Return ONLY valid JSON:
                 print(f"[ANTHROPIC] ⚠️  Rate limit hit: {e}")
             else:
                 print(f"[ANTHROPIC] ❌ Error: {e}")
+            return None
+
+    async def _try_huggingface_conversation(
+        self,
+        answer_text: str,
+        question_text: str,
+        skill: Optional[str],
+        question_type: str,
+        jd_context: str,
+        interview_history: List[Dict[str, Any]] = None,
+        skills_unknown: List[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Generate conversation response using HuggingFace with full context."""
+        if not self.huggingface_available:
+            return None
+        
+        # Build conversation history context
+        history_context = ""
+        if interview_history:
+            history_lines = []
+            for h in interview_history[-5:]:  # Last 5 Q&A for context
+                history_lines.append(f"Q ({h.get('skill', 'unknown')}): {h.get('question', '')[:100]}")
+                history_lines.append(f"A: {h.get('answer', '')[:150]}")
+            history_context = "\n".join(history_lines)
+        
+        if history_context:
+            history_section = f"CONVERSATION HISTORY (recent Q&A):\n{history_context}"
+        else:
+            history_section = "(This is the first question)"
+
+        prompt = f"""You are a professional technical interviewer having a NATURAL conversation.
+
+QUESTION ASKED: {question_text}
+SKILL BEING ASSESSED: {skill or 'General'}
+QUESTION TYPE: {question_type}
+
+CANDIDATE'S ANSWER: {answer_text}
+
+{history_section}
+
+{f"SKILLS CANDIDATE ALREADY SAID THEY DON'T KNOW: {', '.join(skills_unknown or [])}" if skills_unknown else ""}
+
+CRITICAL DETECTION - Check these FIRST:
+1. IS CANDIDATE ASKING A QUESTION? (e.g., "Can you tell me about the job role?", "What kind of work?", "Could you clarify?")
+   → If YES: Set answer_quality="question", next_action="answer_candidate", and ANSWER their question in spoken_response!
+   
+2. IS CANDIDATE SAYING THEY DON'T KNOW THIS SKILL? (e.g., "I don't have experience in...", "I haven't worked with...")
+   → If YES: Set answer_quality="skip_skill", next_action="end_topic", skill_to_skip="{skill}"
+   → spoken_response: "No problem, let's move on to something else."
+   
+3. HAS CANDIDATE ALREADY ANSWERED THIS? (Check conversation history!)
+   → If YES: Don't ask the same thing. Set next_action="continue" to move forward.
+
+INSTRUCTIONS FOR spoken_response (MAX 40 WORDS):
+- If answer was good: Brief acknowledgment
+- If answer was weak: Encouraging, move on
+- If candidate asked a question: ANSWER IT
+- If candidate doesn't know the skill: Accept gracefully
+- Sound natural, like a real human
+
+Return ONLY valid JSON:
+{{
+    "spoken_response": "Your natural spoken response (MAX 40 words)",
+    "scores": {{
+        "correctness": 0.0-5.0,
+        "depth": 0.0-5.0,
+        "clarity": 3.0,
+        "relevance": 0.0-5.0
+    }},
+    "answer_quality": "strong|partial|weak|question|skip_skill",
+    "next_action": "continue|follow_up|end_topic|answer_candidate",
+    "follow_up_question": "Only if next_action is follow_up, otherwise null",
+    "skill_to_skip": "Skill name if candidate doesn't know it, otherwise null",
+    "internal_notes": "Brief evaluation"
+}}"""
+
+        try:
+            result_text = await self._generate_with_huggingface(prompt, max_tokens=500)
+            if not result_text:
+                return None
+            
+            # Parse JSON
+            text = result_text.strip()
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0].strip()
+            
+            result = json.loads(text)
+            result = self._validate_conversation_response(result)
+            
+            if len(result["spoken_response"]) > 200:
+                result["spoken_response"] = result["spoken_response"][:197] + "..."
+            
+            print(f"[HUGGINGFACE] ✅ Conversation response: {result['answer_quality']}")
+            return result
+            
+        except json.JSONDecodeError as e:
+            print(f"[HUGGINGFACE] ❌ JSON parse error: {e}")
+            return None
+        except Exception as e:
+            print(f"[HUGGINGFACE] ❌ Error: {e}")
             return None
 
     async def _try_anthropic_conversation(
@@ -2179,38 +2340,30 @@ Return ONLY the follow-up question text."""
         
         # Helper function to try each provider
         async def try_provider(provider_name: str) -> Optional[Dict[str, Any]]:
-            if provider_name == "local" and settings.USE_LOCAL_LLM and self.lm_studio_available:
-                print(f"[UNIFIED] Trying LM Studio (local LLM)...")
-                return await self._try_lm_studio_conversation(
-                    answer_text, question_text, skill, question_type, jd_context,
-                    interview_history, skills_unknown
-                )
-            elif provider_name == "anthropic" and self.anthropic_available:
-                print(f"[UNIFIED] Trying Anthropic Claude...")
-                return await self._try_anthropic_conversation(
-                    answer_text, question_text, skill, question_type, jd_context,
-                    interview_history, skills_unknown
-                )
-            elif provider_name == "groq" and self.groq_available:
+            if provider_name == "groq" and self.groq_available:
                 print(f"[UNIFIED] Trying Groq...")
                 return await self._try_groq_conversation(
                     answer_text, question_text, skill, question_type, jd_context,
                     interview_history, skills_unknown
                 )
-            elif provider_name == "gemini" and self.gemini_available:
-                # Gemini uses the main Gemini flow below (not a dedicated conversation method)
-                return None
+            elif provider_name == "anthropic" and self.anthropic_available:
+                print(f"[UNIFIED] Trying Anthropic Claude (fallback)...")
+                return await self._try_anthropic_conversation(
+                    answer_text, question_text, skill, question_type, jd_context,
+                    interview_history, skills_unknown
+                )
             return None
         
-        # Build fallback order based on PRIMARY_LLM_PROVIDER
-        all_providers = ["anthropic", "groq", "gemini", "local"]
+        # Simplified provider chain: Groq → Anthropic
+        # (Gemini, HuggingFace, Local LLM removed)
+        all_providers = ["groq", "anthropic"]
         primary = settings.PRIMARY_LLM_PROVIDER.lower()
         
-        # Primary provider first, then others as fallback
+        # Primary provider first, then fallback
         if primary in all_providers:
             fallback_order = [primary] + [p for p in all_providers if p != primary]
         else:
-            fallback_order = all_providers  # Default order if invalid primary
+            fallback_order = all_providers  # Default: groq → anthropic
         
         # Try each provider in order
         for provider in fallback_order:

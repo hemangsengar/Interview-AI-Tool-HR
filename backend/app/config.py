@@ -19,24 +19,28 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     
-    # Google Gemini
+    # Google Gemini (deprecated - kept for compatibility)
     GEMINI_API_KEY: str = ""
     
-    # Groq (Free fallback LLM - very fast)
+    # Groq (Primary LLM - very fast)
     GROQ_API_KEY: str = ""
     
-    # Anthropic Claude
+    # HuggingFace Inference API (optional)
+    HUGGINGFACE_API_KEY: str = ""
+    HUGGINGFACE_MODEL: str = "meta-llama/Llama-3.3-70B-Instruct"
+    
+    # Anthropic Claude (Fallback LLM)
     ANTHROPIC_API_KEY: str = ""
-    ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"  # or "claude-3-5-haiku-20241022" for faster/cheaper
+    ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"
     
-    # Primary LLM Provider: "anthropic", "gemini", "groq", or "local"
-    # Set this to switch the primary AI provider easily
-    PRIMARY_LLM_PROVIDER: str = "anthropic"
+    # Primary LLM Provider: "groq" or "anthropic"
+    # Groq is primary (fast, free), Anthropic is fallback
+    PRIMARY_LLM_PROVIDER: str = "groq"
     
-    # LM Studio (Local LLM via OpenAI-compatible API)
-    LM_STUDIO_URL: str = "http://127.0.0.1:1234"  # Default LM Studio URL (no trailing slash)
-    LM_STUDIO_MODEL: str = "local-model"  # Model name in LM Studio
-    USE_LOCAL_LLM: bool = True  # Set to True to prefer local LLM
+    # Local LLM (deprecated - kept for compatibility)
+    LM_STUDIO_URL: str = "http://127.0.0.1:1234"
+    LM_STUDIO_MODEL: str = "local-model"
+    USE_LOCAL_LLM: bool = False  # Disabled by default
     
     # Sarvam AI
     SARVAM_API_KEY: str = ""
