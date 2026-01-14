@@ -1,6 +1,24 @@
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
+// Warm up the backend on landing page load (handles Render cold start)
+const warmUpBackend = async () => {
+  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+  try {
+    // Silent ping to wake up the backend
+    await fetch(`${apiUrl}/health`, { mode: 'cors' })
+    console.log('[WARMUP] Backend is ready!')
+  } catch (e) {
+    // Silently ignore errors - backend might still be starting
+    console.log('[WARMUP] Backend warming up...')
+  }
+}
+
 const Landing = () => {
+  // Warm up backend on mount
+  useEffect(() => {
+    warmUpBackend()
+  }, [])
   return (
     <div className="min-h-screen bg-dark relative overflow-hidden">
       {/* Animated mesh background */}
