@@ -806,12 +806,13 @@ async def process_conversation(
     metadata["current_question_index"] = question.index
     session.session_metadata = metadata
     
-    # Step 5: Generate TTS for spoken response (parallel-ready)
+    # Step 5: Generate TTS for spoken response (use selected speaker)
+    speaker = metadata.get("speaker", "abhilash")  # Use user's selected voice
     audio_base64 = None
     try:
         response_audio = await speech_service.synthesize_speech(
             llm_response["spoken_response"],
-            speaker="abhilash"  # Male voice
+            speaker=speaker  # Use selected voice, not hardcoded
         )
         if response_audio:
             audio_base64 = base64.b64encode(response_audio).decode('utf-8')
