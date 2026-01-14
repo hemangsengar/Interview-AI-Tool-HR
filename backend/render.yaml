@@ -20,6 +20,10 @@ services:
         value: https://api.sarvam.ai/text-to-speech
       - key: GEMINI_API_KEY
         sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: PRIMARY_LLM_PROVIDER
+        value: "anthropic"
       - key: FRONTEND_URL
         sync: false
       - key: UPLOAD_DIR
