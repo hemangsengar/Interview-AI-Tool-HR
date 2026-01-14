@@ -51,16 +51,19 @@ def init_db():
     Base.metadata.create_all(bind=engine)
     print("✅ Database tables created successfully!")
     
-    # Initialize demo data if in demo mode
-    if settings.DEMO_MODE:
-        _init_demo_data()
+    # Always try to initialize demo data (check inside the function)
+    print(f"[INIT] DEMO_MODE setting: {settings.DEMO_MODE}")
+    print(f"[INIT] DATABASE_URL: {settings.DATABASE_URL}")
+    _init_demo_data()
 
 
 def _init_demo_data():
     """Populate database with demo data for testing."""
     global _demo_initialized
-    if _demo_initialized:
-        return
+    
+    # Always check and create demo data on startup for in-memory DB
+    # This ensures data exists even after cold starts
+    print("[DEMO] Starting demo data initialization...")
     
     from .models import User, Job
     from passlib.context import CryptContext
@@ -69,21 +72,32 @@ def _init_demo_data():
     
     db = SessionLocal()
     try:
-        # Check if demo user already exists
-        existing_user = db.query(User).filter(User.email == "demo@interview.ai").first()
-        if existing_user:
+        # Check if demo jobs already exist (more reliable than checking user)
+        existing_jobs = db.query(Job).filter(Job.job_code.in_(['PY2024', 'JS2024', 'DS2024'])).count()
+        if existing_jobs >= 3:
+            print(f"[DEMO] Demo jobs already exist ({existing_jobs} found), skipping initialization")
             _demo_initialized = True
             return
         
-        # Create demo HR user
-        demo_user = User(
-            name="Demo HR Manager",
-            email="demo@interview.ai",
-            password_hash=pwd_context.hash("demo123"),
-            role="hr"
-        )
-        db.add(demo_user)
-        db.flush()  # Get the user ID
+        print(f"[DEMO] Found only {existing_jobs} demo jobs, creating/recreating demo data...")
+        
+        # Check if demo user already exists
+        existing_user = db.query(User).filter(User.email == "demo@interview.ai").first()
+        
+        if existing_user:
+            demo_user = existing_user
+            print("[DEMO] Using existing demo user")
+        else:
+            # Create demo HR user
+            print("[DEMO] Creating new demo user...")
+            demo_user = User(
+                name="Demo HR Manager",
+                email="demo@interview.ai",
+                password_hash=pwd_context.hash("demo123"),
+                role="hr"
+            )
+            db.add(demo_user)
+            db.flush()  # Get the user ID
         
         # Create demo job postings
         demo_jobs = [
