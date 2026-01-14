@@ -98,3 +98,33 @@ async def root():
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy"}
+
+
+@app.get("/debug")
+async def debug_info():
+    """Debug endpoint to check demo mode and job status."""
+    from .database import SessionLocal, _demo_initialized
+    from .models import Job, User
+    
+    db = SessionLocal()
+    try:
+        demo_mode = settings.DEMO_MODE
+        demo_user = db.query(User).filter(User.email == "demo@interview.ai").first()
+        jobs = db.query(Job).all()
+        active_jobs = db.query(Job).filter(Job.is_active == 1).all()
+        
+        job_codes = [{"code": j.job_code, "title": j.title, "active": bool(j.is_active)} for j in jobs]
+        
+        return {
+            "demo_mode": demo_mode,
+            "demo_initialized": _demo_initialized,
+            "demo_user_exists": demo_user is not None,
+            "total_jobs": len(jobs),
+            "active_jobs": len(active_jobs),
+            "job_codes": job_codes,
+            "primary_llm": settings.PRIMARY_LLM_PROVIDER,
+            "anthropic_configured": bool(settings.ANTHROPIC_API_KEY),
+        }
+    finally:
+        db.close()
+
