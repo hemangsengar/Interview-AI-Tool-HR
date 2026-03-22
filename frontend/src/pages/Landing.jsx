@@ -42,19 +42,19 @@ const Landing = () => {
       {/* Navigation */}
       <nav className="relative z-10 flex justify-between items-center p-6 max-w-7xl mx-auto">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 glass rounded-xl flex items-center justify-center">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center shadow-glow-primary">
+            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
             </svg>
           </div>
-          <span className="text-xl font-bold text-white">InterviewAI</span>
+          <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">InterviewAI</span>
         </div>
-        <div className="flex gap-4">
-          <a href="#how-it-works" className="text-slate-300 hover:text-white transition-colors">How it Works</a>
-          <a href="#use-cases" className="text-slate-300 hover:text-white transition-colors">Use Cases</a>
-          <a href="#tech" className="text-slate-300 hover:text-white transition-colors">Tech</a>
-          <a href="#creator" className="text-slate-300 hover:text-white transition-colors">Creator</a>
+        <div className="flex gap-6">
+          <a href="#how-it-works" className="text-slate-300 hover:text-white transition-all duration-300 font-medium">How it Works</a>
+          <a href="#use-cases" className="text-slate-300 hover:text-white transition-all duration-300 font-medium">Use Cases</a>
+          <a href="#tech" className="text-slate-300 hover:text-white transition-all duration-300 font-medium">Tech</a>
+          <a href="#creator" className="text-slate-300 hover:text-white transition-all duration-300 font-medium">Creator</a>
         </div>
       </nav>
 
@@ -94,25 +94,32 @@ const Landing = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
             <Link
               to="/hr/login"
-              className="group relative px-8 py-4 bg-gradient-primary rounded-2xl font-semibold text-lg text-white
-                shadow-glow-primary hover:shadow-[0_0_50px_rgba(124,58,237,0.5)] 
-                transition-all duration-300 hover:scale-105 w-full sm:w-auto"
+              className="group relative px-10 py-5 bg-gradient-primary rounded-2xl font-semibold text-lg text-white
+                shadow-glow-primary hover:shadow-[0_0_60px_rgba(139,92,246,0.6),0_0_100px_rgba(139,92,246,0.3)]
+                transition-all duration-300 hover:scale-105 hover:-translate-y-1 w-full sm:w-auto"
             >
-              <span className="flex items-center justify-center gap-2">
-                <span>🏢</span>
+              <span className="flex items-center justify-center gap-3">
+                <span className="text-xl">🏢</span>
                 <span>HR Portal</span>
+                <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
               </span>
             </Link>
 
             <Link
               to="/candidate"
-              className="group relative px-8 py-4 glass border-2 border-primary/50 rounded-2xl 
+              className="group relative px-10 py-5 glass border-2 border-primary/50 rounded-2xl
                 font-semibold text-lg text-white hover:bg-primary/20 hover:border-primary
-                transition-all duration-300 hover:scale-105 w-full sm:w-auto"
+                transition-all duration-300 hover:scale-105 hover:-translate-y-1 w-full sm:w-auto
+                hover:shadow-glow-primary"
             >
-              <span className="flex items-center justify-center gap-2">
-                <span>🎤</span>
+              <span className="flex items-center justify-center gap-3">
+                <span className="text-xl">🎤</span>
                 <span>Join Interview</span>
+                <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
               </span>
             </Link>
           </div>
@@ -387,17 +394,17 @@ const Landing = () => {
       </section>
 
       {/* Footer */}
-      <footer className="relative py-12 px-6 border-t border-slate-800">
+      <footer className="relative py-12 px-6 border-t border-primary/10">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 glass rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center shadow-glow-primary">
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                 </svg>
               </div>
-              <span className="text-xl font-bold text-white">InterviewAI</span>
+              <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">InterviewAI</span>
             </div>
 
             <div className="text-slate-400 text-sm">
@@ -409,7 +416,7 @@ const Landing = () => {
                 href="https://github.com/hemangsengar/Interview-AI-Tool-HR"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-slate-400 hover:text-white transition-colors"
+                className="text-slate-400 hover:text-white transition-all duration-300 font-medium"
               >
                 View Source
               </a>

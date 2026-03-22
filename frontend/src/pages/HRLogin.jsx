@@ -38,34 +38,35 @@ const HRLogin = () => {
       {/* Login Card */}
       <div className="relative w-full max-w-md">
         {/* Glow behind card */}
-        <div className="absolute -inset-1 bg-gradient-primary rounded-3xl blur-lg opacity-30" />
+        <div className="absolute -inset-1 bg-gradient-primary rounded-3xl blur-xl opacity-30 animate-pulse-glow" />
 
-        <div className="relative glass rounded-3xl p-8">
+        <div className="relative glass rounded-3xl p-10 shadow-2xl">
           {/* Header */}
           <div className="text-center mb-8">
-            <Link to="/" className="inline-block mb-6">
-              <div className="w-16 h-16 bg-gradient-primary rounded-2xl flex items-center justify-center mx-auto shadow-glow-primary">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <Link to="/" className="inline-block mb-6 group">
+              <div className="w-20 h-20 bg-gradient-primary rounded-2xl flex items-center justify-center mx-auto shadow-glow-primary
+                group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
               </div>
             </Link>
-            <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-            <p className="text-slate-400">Sign in to access your HR dashboard</p>
+            <h1 className="text-4xl font-bold text-white mb-3">Welcome Back</h1>
+            <p className="text-slate-400 text-lg">Sign in to access your HR dashboard</p>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
-              {error}
+            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border-2 border-red-500/30 text-red-400 text-sm text-center backdrop-blur-sm">
+              <span className="font-semibold">{error}</span>
             </div>
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-semibold text-slate-300 mb-3">
                 Email Address
               </label>
               <input
@@ -79,7 +80,7 @@ const HRLogin = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-semibold text-slate-300 mb-3">
                 Password
               </label>
               <input
@@ -95,11 +96,12 @@ const HRLogin = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn-primary py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full btn-primary py-5 text-lg disabled:opacity-50 disabled:cursor-not-allowed
+                disabled:hover:translate-y-0 disabled:hover:scale-100"
             >
               {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                <span className="flex items-center justify-center gap-3">
+                  <svg className="animate-spin w-6 h-6" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
@@ -113,9 +115,9 @@ const HRLogin = () => {
 
           {/* Footer */}
           <div className="mt-8 text-center">
-            <p className="text-slate-400">
+            <p className="text-slate-400 text-base">
               Don&apos;t have an account?{' '}
-              <Link to="/hr/signup" className="text-primary-light hover:text-primary transition-colors font-medium">
+              <Link to="/hr/signup" className="text-primary-light hover:text-primary transition-all duration-300 font-semibold">
                 Create one
               </Link>
             </p>
@@ -123,8 +125,11 @@ const HRLogin = () => {
 
           {/* Back to home */}
           <div className="mt-6 text-center">
-            <Link to="/" className="text-sm text-slate-500 hover:text-slate-300 transition-colors">
-              ← Back to Home
+            <Link to="/" className="text-sm text-slate-400 hover:text-slate-200 transition-all duration-300 font-medium inline-flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span>Back to Home</span>
             </Link>
           </div>
         </div>
