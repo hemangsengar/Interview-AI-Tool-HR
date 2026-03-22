@@ -36,44 +36,44 @@ const CandidateEntry = () => {
       {/* Entry Card */}
       <div className="relative w-full max-w-md">
         {/* Glow behind card */}
-        <div className="absolute -inset-1 bg-gradient-accent rounded-3xl blur-lg opacity-30" />
+        <div className="absolute -inset-1 bg-gradient-primary rounded-3xl blur-xl opacity-30 animate-pulse-glow" />
 
-        <div className="relative glass rounded-3xl p-8">
+        <div className="relative glass rounded-3xl p-10 shadow-2xl">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-gradient-accent rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-glow-accent">
-              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-24 h-24 bg-gradient-accent rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-glow-accent hover:scale-110 transition-transform duration-300">
+              <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
               </svg>
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Join Interview</h1>
-            <p className="text-slate-400">Enter your job code to begin</p>
+            <h1 className="text-4xl font-bold text-white mb-3">Join Interview</h1>
+            <p className="text-slate-400 text-lg">Enter your job code to begin</p>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
-              {error}
+            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border-2 border-red-500/30 text-red-400 text-sm text-center backdrop-blur-sm">
+              <span className="font-semibold">{error}</span>
             </div>
           )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-3 text-center">
+              <label className="block text-sm font-semibold text-slate-300 mb-3 text-center">
                 Job Code
               </label>
               <input
                 type="text"
                 value={jobCode}
                 onChange={(e) => setJobCode(e.target.value.toUpperCase())}
-                className="input-field text-center text-2xl font-mono tracking-widest uppercase"
+                className="input-field text-center text-3xl font-mono tracking-widest uppercase font-bold"
                 placeholder="XXXXXX"
                 maxLength={6}
                 required
               />
-              <p className="text-xs text-slate-500 text-center mt-2">
+              <p className="text-xs text-slate-500 text-center mt-3">
                 Enter the 6-character code provided by HR
               </p>
             </div>
@@ -81,22 +81,23 @@ const CandidateEntry = () => {
             <button
               type="submit"
               disabled={loading || jobCode.length < 6}
-              className="w-full bg-gradient-accent py-4 rounded-2xl font-semibold text-lg text-white
-                shadow-glow-accent hover:shadow-[0_0_50px_rgba(245,158,11,0.5)] 
-                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-accent py-5 rounded-2xl font-semibold text-lg text-white
+                shadow-glow-accent hover:shadow-[0_0_60px_rgba(6,182,212,0.6),0_0_100px_rgba(6,182,212,0.3)]
+                transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] disabled:opacity-50
+                disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:scale-100"
             >
               {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                <span className="flex items-center justify-center gap-3">
+                  <svg className="animate-spin w-6 h-6" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
                   Finding Job...
                 </span>
               ) : (
-                <span className="flex items-center justify-center gap-2">
+                <span className="flex items-center justify-center gap-3">
                   <span>Continue</span>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
                 </span>
@@ -105,68 +106,80 @@ const CandidateEntry = () => {
           </form>
 
           {/* Instructions */}
-          <div className="mt-8 p-4 rounded-xl bg-dark-card/50 border border-slate-700">
-            <h3 className="text-sm font-semibold text-slate-300 mb-3">📋 Before you begin:</h3>
-            <ul className="text-xs text-slate-400 space-y-2">
-              <li className="flex items-start gap-2">
-                <span className="text-green-400">✓</span>
-                Ensure you&apos;re in a quiet environment
+          <div className="mt-8 p-5 rounded-xl bg-dark-card/70 border border-primary/20 backdrop-blur-sm">
+            <h3 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
+              <span>📋</span>
+              <span>Before you begin:</span>
+            </h3>
+            <ul className="text-sm text-slate-400 space-y-2.5">
+              <li className="flex items-start gap-3">
+                <span className="text-green-400 text-lg">✓</span>
+                <span>Ensure you&apos;re in a quiet environment</span>
               </li>
-              <li className="flex items-start gap-2">
-                <span className="text-green-400">✓</span>
-                Have your microphone ready
+              <li className="flex items-start gap-3">
+                <span className="text-green-400 text-lg">✓</span>
+                <span>Have your microphone ready</span>
               </li>
-              <li className="flex items-start gap-2">
-                <span className="text-green-400">✓</span>
-                Keep your resume details handy
+              <li className="flex items-start gap-3">
+                <span className="text-green-400 text-lg">✓</span>
+                <span>Keep your resume details handy</span>
               </li>
             </ul>
           </div>
 
           {/* Demo Job Codes */}
-          <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-cyan/10 to-primary/10 border border-cyan/20">
-            <h3 className="text-sm font-semibold text-cyan mb-3">🎯 Demo Job Codes (Try Now!)</h3>
-            <div className="grid grid-cols-1 gap-2">
+          <div className="mt-6 p-5 rounded-xl bg-gradient-to-br from-cyan/15 to-primary/15 border border-cyan/30 backdrop-blur-sm">
+            <h3 className="text-sm font-bold text-cyan-light mb-4 flex items-center gap-2">
+              <span>🎯</span>
+              <span>Demo Job Codes (Try Now!)</span>
+            </h3>
+            <div className="grid grid-cols-1 gap-2.5">
               <button
                 type="button"
                 onClick={() => setJobCode('PY2024')}
-                className="flex items-center justify-between p-2 rounded-lg bg-dark/50 hover:bg-dark/80 border border-slate-700 hover:border-cyan/50 transition-all group"
+                className="flex items-center justify-between p-3 rounded-lg bg-dark/60 hover:bg-dark/90
+                  border border-slate-700 hover:border-cyan/60 transition-all group"
               >
                 <div className="text-left">
-                  <span className="text-xs text-slate-400">Senior Python Developer</span>
+                  <span className="text-sm text-slate-300 font-medium">Senior Python Developer</span>
                 </div>
-                <span className="font-mono text-sm text-cyan group-hover:text-white transition-colors">PY2024</span>
+                <span className="font-mono text-base text-cyan font-bold group-hover:text-white transition-colors">PY2024</span>
               </button>
               <button
                 type="button"
                 onClick={() => setJobCode('JS2024')}
-                className="flex items-center justify-between p-2 rounded-lg bg-dark/50 hover:bg-dark/80 border border-slate-700 hover:border-cyan/50 transition-all group"
+                className="flex items-center justify-between p-3 rounded-lg bg-dark/60 hover:bg-dark/90
+                  border border-slate-700 hover:border-cyan/60 transition-all group"
               >
                 <div className="text-left">
-                  <span className="text-xs text-slate-400">Full Stack JS Developer</span>
+                  <span className="text-sm text-slate-300 font-medium">Full Stack JS Developer</span>
                 </div>
-                <span className="font-mono text-sm text-cyan group-hover:text-white transition-colors">JS2024</span>
+                <span className="font-mono text-base text-cyan font-bold group-hover:text-white transition-colors">JS2024</span>
               </button>
               <button
                 type="button"
                 onClick={() => setJobCode('DS2024')}
-                className="flex items-center justify-between p-2 rounded-lg bg-dark/50 hover:bg-dark/80 border border-slate-700 hover:border-cyan/50 transition-all group"
+                className="flex items-center justify-between p-3 rounded-lg bg-dark/60 hover:bg-dark/90
+                  border border-slate-700 hover:border-cyan/60 transition-all group"
               >
                 <div className="text-left">
-                  <span className="text-xs text-slate-400">Data Scientist - ML</span>
+                  <span className="text-sm text-slate-300 font-medium">Data Scientist - ML</span>
                 </div>
-                <span className="font-mono text-sm text-cyan group-hover:text-white transition-colors">DS2024</span>
+                <span className="font-mono text-base text-cyan font-bold group-hover:text-white transition-colors">DS2024</span>
               </button>
             </div>
-            <p className="text-xs text-slate-500 mt-2 text-center">
+            <p className="text-xs text-slate-500 mt-3 text-center font-medium">
               Click any code above to auto-fill
             </p>
           </div>
 
           {/* Back to home */}
-          <div className="mt-6 text-center">
-            <Link to="/" className="text-sm text-slate-500 hover:text-slate-300 transition-colors">
-              ← Back to Home
+          <div className="mt-8 text-center">
+            <Link to="/" className="text-sm text-slate-400 hover:text-slate-200 transition-all duration-300 font-medium inline-flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span>Back to Home</span>
             </Link>
           </div>
         </div>

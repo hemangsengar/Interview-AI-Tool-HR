@@ -8,29 +8,29 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#7C3AED',
+          DEFAULT: '#8B5CF6',
           light: '#A78BFA',
-          dark: '#5B21B6',
+          dark: '#6D28D9',
         },
         secondary: {
-          DEFAULT: '#EC4899',
-          light: '#F472B6',
-          dark: '#BE185D',
+          DEFAULT: '#F472B6',
+          light: '#F9A8D4',
+          dark: '#EC4899',
         },
         accent: {
-          DEFAULT: '#F59E0B',
-          light: '#FBBF24',
-          dark: '#D97706',
+          DEFAULT: '#06B6D4',
+          light: '#22D3EE',
+          dark: '#0891B2',
         },
         cyan: {
           DEFAULT: '#06B6D4',
           light: '#22D3EE',
         },
         dark: {
-          DEFAULT: '#0F172A',
-          darker: '#020617',
-          card: '#1E293B',
-          hover: '#334155',
+          DEFAULT: '#0A0E1A',
+          darker: '#050711',
+          card: '#1A1F2E',
+          hover: '#252B3D',
         }
       },
       animation: {
@@ -45,15 +45,16 @@ export default {
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-primary': 'linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)',
-        'gradient-secondary': 'linear-gradient(135deg, #EC4899 0%, #F59E0B 100%)',
-        'gradient-accent': 'linear-gradient(135deg, #06B6D4 0%, #7C3AED 100%)',
+        'gradient-primary': 'linear-gradient(135deg, #8B5CF6 0%, #F472B6 100%)',
+        'gradient-secondary': 'linear-gradient(135deg, #F472B6 0%, #06B6D4 100%)',
+        'gradient-accent': 'linear-gradient(135deg, #06B6D4 0%, #8B5CF6 100%)',
+        'gradient-warm': 'linear-gradient(135deg, #F59E0B 0%, #EC4899 100%)',
       },
       boxShadow: {
-        'glow-primary': '0 0 30px rgba(124, 58, 237, 0.3)',
-        'glow-secondary': '0 0 30px rgba(236, 72, 153, 0.3)',
-        'glow-accent': '0 0 30px rgba(245, 158, 11, 0.3)',
-        'glow-cyan': '0 0 30px rgba(6, 182, 212, 0.3)',
+        'glow-primary': '0 0 40px rgba(139, 92, 246, 0.4), 0 0 80px rgba(139, 92, 246, 0.15)',
+        'glow-secondary': '0 0 40px rgba(244, 114, 182, 0.4), 0 0 80px rgba(244, 114, 182, 0.15)',
+        'glow-accent': '0 0 40px rgba(6, 182, 212, 0.4), 0 0 80px rgba(6, 182, 212, 0.15)',
+        'glow-cyan': '0 0 40px rgba(6, 182, 212, 0.4), 0 0 80px rgba(6, 182, 212, 0.15)',
       },
       backdropBlur: {
         xs: '2px',
