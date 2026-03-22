@@ -8,29 +8,29 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#7C3AED',
-          light: '#A78BFA',
-          dark: '#5B21B6',
+          DEFAULT: '#22d3ee',
+          light: '#67e8f9',
+          dark: '#0891b2',
         },
         secondary: {
-          DEFAULT: '#EC4899',
-          light: '#F472B6',
-          dark: '#BE185D',
+          DEFAULT: '#f59e0b',
+          light: '#fbbf24',
+          dark: '#d97706',
         },
         accent: {
-          DEFAULT: '#F59E0B',
-          light: '#FBBF24',
-          dark: '#D97706',
+          DEFAULT: '#34d399',
+          light: '#6ee7b7',
+          dark: '#10b981',
         },
         cyan: {
-          DEFAULT: '#06B6D4',
-          light: '#22D3EE',
+          DEFAULT: '#06b6d4',
+          light: '#22d3ee',
         },
         dark: {
-          DEFAULT: '#0F172A',
-          darker: '#020617',
-          card: '#1E293B',
-          hover: '#334155',
+          DEFAULT: '#08111f',
+          darker: '#030712',
+          card: '#0f172a',
+          hover: '#162338',
         }
       },
       animation: {
@@ -45,21 +45,22 @@ export default {
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-primary': 'linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)',
-        'gradient-secondary': 'linear-gradient(135deg, #EC4899 0%, #F59E0B 100%)',
-        'gradient-accent': 'linear-gradient(135deg, #06B6D4 0%, #7C3AED 100%)',
+        'gradient-primary': 'linear-gradient(135deg, #22d3ee 0%, #0ea5e9 45%, #0284c7 100%)',
+        'gradient-secondary': 'linear-gradient(135deg, #f59e0b 0%, #fb923c 50%, #f97316 100%)',
+        'gradient-accent': 'linear-gradient(135deg, #34d399 0%, #14b8a6 50%, #06b6d4 100%)',
       },
       boxShadow: {
-        'glow-primary': '0 0 30px rgba(124, 58, 237, 0.3)',
-        'glow-secondary': '0 0 30px rgba(236, 72, 153, 0.3)',
-        'glow-accent': '0 0 30px rgba(245, 158, 11, 0.3)',
+        'glow-primary': '0 0 30px rgba(34, 211, 238, 0.35)',
+        'glow-secondary': '0 0 30px rgba(245, 158, 11, 0.28)',
+        'glow-accent': '0 0 30px rgba(52, 211, 153, 0.28)',
         'glow-cyan': '0 0 30px rgba(6, 182, 212, 0.3)',
       },
       backdropBlur: {
         xs: '2px',
       },
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        sans: ['Manrope', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        display: ['Sora', 'Manrope', 'sans-serif'],
       },
     },
   },

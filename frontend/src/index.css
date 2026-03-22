@@ -1,59 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ============================================
-   VIBRANT/BOLD DESIGN SYSTEM
-   ============================================ */
+  DESIGN SYSTEM
+  ============================================ */
 
 :root {
-  /* Primary Colors */
-  --color-primary: #7C3AED;
-  --color-primary-light: #A78BFA;
-  --color-primary-dark: #5B21B6;
+  /* Primary Colors (teal/cyan direction) */
+  --color-primary: #22d3ee;
+  --color-primary-light: #67e8f9;
+  --color-primary-dark: #0891b2;
   
-  /* Secondary Colors */
-  --color-secondary: #EC4899;
-  --color-secondary-light: #F472B6;
-  --color-secondary-dark: #BE185D;
+  /* Secondary Colors (warm amber direction) */
+  --color-secondary: #f59e0b;
+  --color-secondary-light: #fbbf24;
+  --color-secondary-dark: #d97706;
   
   /* Accent Colors */
-  --color-accent: #F59E0B;
-  --color-accent-light: #FBBF24;
-  --color-accent-dark: #D97706;
+  --color-accent: #34d399;
+  --color-accent-light: #6ee7b7;
+  --color-accent-dark: #10b981;
   
-  /* Cyan/Teal Accent */
-  --color-cyan: #06B6D4;
-  --color-cyan-light: #22D3EE;
+  /* Cyan Accent */
+  --color-cyan: #06b6d4;
+  --color-cyan-light: #22d3ee;
   
   /* Background Colors */
-  --color-bg-dark: #0F172A;
-  --color-bg-darker: #020617;
-  --color-bg-card: #1E293B;
-  --color-bg-card-hover: #334155;
+  --color-bg-dark: #08111f;
+  --color-bg-darker: #030712;
+  --color-bg-card: #0f172a;
+  --color-bg-card-hover: #162338;
   
   /* Text Colors */
-  --color-text-primary: #F8FAFC;
-  --color-text-secondary: #94A3B8;
-  --color-text-muted: #64748B;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted: #94a3b8;
   
   /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);
-  --gradient-secondary: linear-gradient(135deg, #EC4899 0%, #F59E0B 100%);
-  --gradient-accent: linear-gradient(135deg, #06B6D4 0%, #7C3AED 100%);
-  --gradient-dark: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
-  --gradient-mesh: radial-gradient(at 40% 20%, #7C3AED33 0px, transparent 50%),
-                   radial-gradient(at 80% 0%, #EC489933 0px, transparent 50%),
-                   radial-gradient(at 0% 50%, #06B6D433 0px, transparent 50%),
-                   radial-gradient(at 80% 50%, #F59E0B22 0px, transparent 50%),
-                   radial-gradient(at 0% 100%, #7C3AED22 0px, transparent 50%);
+  --gradient-primary: linear-gradient(135deg, #22d3ee 0%, #0ea5e9 45%, #0284c7 100%);
+  --gradient-secondary: linear-gradient(135deg, #f59e0b 0%, #fb923c 50%, #f97316 100%);
+  --gradient-accent: linear-gradient(135deg, #34d399 0%, #14b8a6 50%, #06b6d4 100%);
+  --gradient-dark: linear-gradient(135deg, #08111f 0%, #0f172a 100%);
+  --gradient-mesh: radial-gradient(at 10% 15%, #22d3ee2b 0px, transparent 50%),
+             radial-gradient(at 90% 8%, #f59e0b2b 0px, transparent 45%),
+             radial-gradient(at 80% 80%, #14b8a636 0px, transparent 50%),
+             radial-gradient(at 20% 78%, #0ea5e933 0px, transparent 45%);
   
   /* Shadows */
-  --shadow-glow-primary: 0 0 30px rgba(124, 58, 237, 0.3);
-  --shadow-glow-secondary: 0 0 30px rgba(236, 72, 153, 0.3);
-  --shadow-glow-accent: 0 0 30px rgba(245, 158, 11, 0.3);
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
-  --shadow-card-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  --shadow-glow-primary: 0 0 28px rgba(34, 211, 238, 0.35);
+  --shadow-glow-secondary: 0 0 28px rgba(245, 158, 11, 0.25);
+  --shadow-glow-accent: 0 0 28px rgba(52, 211, 153, 0.3);
+  --shadow-card: 0 14px 34px -20px rgba(2, 6, 23, 0.75);
+  --shadow-card-hover: 0 24px 44px -20px rgba(2, 6, 23, 0.9);
   
   /* Border Radius */
   --radius-sm: 0.5rem;
@@ -63,28 +64,33 @@
   --radius-full: 9999px;
   
   /* Glassmorphism */
-  --glass-bg: rgba(30, 41, 59, 0.7);
-  --glass-border: rgba(148, 163, 184, 0.1);
-  --glass-blur: blur(16px);
+  --glass-bg: rgba(15, 23, 42, 0.62);
+  --glass-border: rgba(148, 163, 184, 0.2);
+  --glass-blur: blur(14px);
 }
 
 /* Base Styles */
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--color-bg-dark);
+  background: var(--color-bg-dark);
   color: var(--color-text-primary);
+  line-height: 1.5;
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Sora', 'Manrope', sans-serif;
+  letter-spacing: -0.02em;
+}
+
 /* ============================================
-   GLASSMORPHISM UTILITIES
+   UTILITIES
    ============================================ */
 
 @layer components {
@@ -96,17 +102,17 @@ code {
   }
   
   .glass-light {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
   }
   
   .glass-dark {
-    background: rgba(15, 23, 42, 0.8);
+    background: rgba(2, 6, 23, 0.75);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
-    border: 1px solid rgba(148, 163, 184, 0.1);
+    border: 1px solid rgba(148, 163, 184, 0.18);
   }
   
   /* Gradient Text */
@@ -133,10 +139,10 @@ code {
   /* Buttons */
   .btn-primary {
     background: var(--gradient-primary);
-    color: white;
+    color: #062b34;
     padding: 0.75rem 1.5rem;
     border-radius: var(--radius-lg);
-    font-weight: 600;
+    font-weight: 700;
     transition: all 0.3s ease;
     border: none;
     cursor: pointer;
@@ -145,11 +151,11 @@ code {
   
   .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 0 40px rgba(124, 58, 237, 0.5);
+    box-shadow: 0 0 40px rgba(34, 211, 238, 0.45);
   }
   
   .btn-secondary {
-    background: transparent;
+    background: rgba(15, 23, 42, 0.35);
     color: var(--color-text-primary);
     padding: 0.75rem 1.5rem;
     border-radius: var(--radius-lg);
@@ -160,7 +166,7 @@ code {
   }
   
   .btn-secondary:hover {
-    background: var(--color-primary);
+    background: rgba(34, 211, 238, 0.12);
     transform: translateY(-2px);
   }
   
@@ -170,20 +176,21 @@ code {
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
+    border-radius: 1.25rem;
     padding: 1.5rem;
     transition: all 0.3s ease;
+    box-shadow: var(--shadow-card);
   }
   
   .card:hover {
     border-color: var(--color-primary);
-    box-shadow: var(--shadow-glow-primary);
+    box-shadow: var(--shadow-card-hover);
     transform: translateY(-4px);
   }
   
   /* Input Fields */
   .input-field {
-    background: rgba(15, 23, 42, 0.5);
+    background: rgba(15, 23, 42, 0.52);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     padding: 0.75rem 1rem;
@@ -195,7 +202,7 @@ code {
   .input-field:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.22);
   }
   
   .input-field::placeholder {
@@ -227,11 +234,11 @@ code {
 
 @keyframes pulse-glow {
   0%, 100% { 
-    box-shadow: 0 0 20px rgba(124, 58, 237, 0.4);
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.35);
     transform: scale(1);
   }
   50% { 
-    box-shadow: 0 0 40px rgba(124, 58, 237, 0.6);
+    box-shadow: 0 0 40px rgba(34, 211, 238, 0.5);
     transform: scale(1.02);
   }
 }
@@ -264,6 +271,17 @@ code {
   to { transform: rotate(360deg); }
 }
 
+@keyframes reveal-up {
+  0% {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @layer utilities {
   .animate-float {
     animation: float 6s ease-in-out infinite;
@@ -284,6 +302,10 @@ code {
   
   .animate-rotate-slow {
     animation: rotate-slow 20s linear infinite;
+  }
+
+  .animate-reveal-up {
+    animation: reveal-up 0.8s ease forwards;
   }
 }
 

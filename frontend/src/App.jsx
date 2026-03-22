@@ -19,7 +19,7 @@ function ProtectedRoute({ children }) {
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-dark text-slate-100">
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Landing />} />
