@@ -533,7 +533,7 @@ class LLMService:
         Initialize LLM service with configurable provider priority.
         
         Provider priority (configurable via PRIMARY_LLM_PROVIDER):
-        - "anthropic": Anthropic Claude (recommended)
+        - "anthropic": Anthropic API (recommended)
         - "gemini": Google Gemini
         - "groq": Groq Llama 3.3 70B (free, fast)
         - "local": LM Studio local LLM
@@ -624,7 +624,7 @@ class LLMService:
         # Initialize HuggingFace (Primary)
         self._init_huggingface()
         
-        # Initialize Anthropic Claude (Fallback)
+        # Initialize Anthropic (Fallback)
         self._init_anthropic()
         
         # LM Studio disabled by default
@@ -650,13 +650,13 @@ class LLMService:
             print(f"[LLMService] ❌ HuggingFace init failed: {e}")
 
     def _init_anthropic(self):
-        """Initialize Anthropic Claude client if API key is available."""
+        """Initialize Anthropic API client if API key is available."""
         try:
             if settings.ANTHROPIC_API_KEY:
                 from anthropic import Anthropic
                 self.anthropic_client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
                 self.anthropic_available = True
-                print(f"[LLMService] ✅ Anthropic Claude available ({settings.ANTHROPIC_MODEL})")
+                print(f"[LLMService] ✅ Anthropic available ({settings.ANTHROPIC_MODEL})")
             else:
                 print("[LLMService] ⚠️  ANTHROPIC_API_KEY not set, Anthropic disabled")
                 self.anthropic_available = False
@@ -935,7 +935,7 @@ Return ONLY valid JSON:
             return None
 
     async def _generate_with_anthropic(self, prompt: str, max_tokens: int = 1024, system_prompt: str = None) -> Optional[str]:
-        """Generate text using Anthropic Claude."""
+        """Generate text using Anthropic API."""
         if not self.anthropic_available or not self.anthropic_client:
             return None
         
@@ -1080,7 +1080,7 @@ Return ONLY valid JSON:
         interview_history: List[Dict[str, Any]] = None,
         skills_unknown: List[str] = None
     ) -> Optional[Dict[str, Any]]:
-        """Generate conversation response using Anthropic Claude with full context."""
+        """Generate conversation response using Anthropic API with full context."""
         if not self.anthropic_available:
             return None
         
@@ -2347,7 +2347,7 @@ Return ONLY the follow-up question text."""
                     interview_history, skills_unknown
                 )
             elif provider_name == "anthropic" and self.anthropic_available:
-                print(f"[UNIFIED] Trying Anthropic Claude (fallback)...")
+                print(f"[UNIFIED] Trying Anthropic (fallback)...")
                 return await self._try_anthropic_conversation(
                     answer_text, question_text, skill, question_type, jd_context,
                     interview_history, skills_unknown

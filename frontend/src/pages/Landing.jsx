@@ -315,8 +315,8 @@ const Landing = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div className="glass p-6 rounded-2xl text-center hover:border-primary/50 transition-all">
               <div className="text-4xl mb-3">🧠</div>
-              <h4 className="font-semibold text-white">Claude AI</h4>
-              <p className="text-slate-400 text-xs mt-1">Anthropic</p>
+              <h4 className="font-semibold text-white">AI Models</h4>
+              <p className="text-slate-400 text-xs mt-1">LLM Integration</p>
             </div>
             <div className="glass p-6 rounded-2xl text-center hover:border-primary/50 transition-all">
               <div className="text-4xl mb-3">⚛️</div>

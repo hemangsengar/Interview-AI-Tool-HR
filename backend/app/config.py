@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     HUGGINGFACE_API_KEY: str = ""
     HUGGINGFACE_MODEL: str = "meta-llama/Llama-3.3-70B-Instruct"
     
-    # Anthropic Claude (Fallback LLM)
+    # Anthropic (Fallback LLM)
     ANTHROPIC_API_KEY: str = ""
     ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"
     
