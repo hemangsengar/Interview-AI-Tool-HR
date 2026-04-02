@@ -1,52 +1,56 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
-import { useAuthStore } from './store/authStore'
-
-// Pages
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { Toaster } from 'sonner'
+import MainLayout from './components/layout/MainLayout'
 import Landing from './pages/Landing'
 import HRLogin from './pages/HRLogin'
 import HRSignup from './pages/HRSignup'
 import HRDashboard from './pages/HRDashboard'
 import JobDetails from './pages/JobDetails'
-import InterviewResults from './pages/InterviewResults'
 import CandidateEntry from './pages/CandidateEntry'
 import CandidateApply from './pages/CandidateApply'
 import InterviewRoom from './pages/InterviewRoom'
+import InterviewResults from './pages/InterviewResults'
+import HRSettings from './pages/HRSettings'
+import InterviewSuccess from './pages/InterviewSuccess'
+import NotFound from './pages/NotFound'
 
-function ProtectedRoute({ children }) {
-  const token = useAuthStore(state => state.token)
-  return token ? children : <Navigate to="/hr/login" />
+const ProtectedRoute = ({ children }) => {
+  const token = localStorage.getItem('token')
+  if (!token) return <Navigate to="/hr/login" replace />
+  return <MainLayout>{children}</MainLayout>
+}
+
+const PublicLayout = ({ children }) => {
+  return <div className="min-h-screen bg-dark">{children}</div>
 }
 
 function App() {
   return (
-    <div className="min-h-screen bg-dark text-slate-100">
+    <Router>
+      <Toaster position="top-right" theme="dark" richColors closeButton />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Landing />} />
-        <Route path="/hr/login" element={<HRLogin />} />
-        <Route path="/hr/signup" element={<HRSignup />} />
-        <Route path="/candidate" element={<CandidateEntry />} />
-        <Route path="/apply/:jobId" element={<CandidateApply />} />
-        <Route path="/interview/:sessionId" element={<InterviewRoom />} />
+        <Route path="/hr/login" element={<PublicLayout><HRLogin /></PublicLayout>} />
+        <Route path="/hr/signup" element={<PublicLayout><HRSignup /></PublicLayout>} />
         
-        {/* Protected HR Routes */}
-        <Route path="/hr/jobs" element={
-          <ProtectedRoute>
-            <HRDashboard />
-          </ProtectedRoute>
-        } />
-        <Route path="/hr/jobs/:jobId" element={
-          <ProtectedRoute>
-            <JobDetails />
-          </ProtectedRoute>
-        } />
-        <Route path="/hr/interviews/:sessionId" element={
-          <ProtectedRoute>
-            <InterviewResults />
-          </ProtectedRoute>
-        } />
+        {/* Candidate Routes */}
+        <Route path="/candidate" element={<PublicLayout><CandidateEntry /></PublicLayout>} />
+        <Route path="/candidate/apply/:jobCode" element={<PublicLayout><CandidateApply /></PublicLayout>} />
+        <Route path="/interview/:sessionId" element={<PublicLayout><InterviewRoom /></PublicLayout>} />
+        <Route path="/interview/success/:sessionId" element={<PublicLayout><InterviewSuccess /></PublicLayout>} />
+        
+        {/* HR Protected Routes */}
+        <Route path="/dashboard" element={<ProtectedRoute><HRDashboard /></ProtectedRoute>} />
+        <Route path="/job/:jobId" element={<ProtectedRoute><JobDetails /></ProtectedRoute>} />
+        <Route path="/results/:sessionId" element={<ProtectedRoute><InterviewResults /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><HRSettings /></ProtectedRoute>} />
+
+        {/* Fallback */}
+        <Route path="/404" element={<NotFound />} />
+        <Route path="*" element={<Navigate to="/404" replace />} />
       </Routes>
-    </div>
+    </Router>
   )
 }
 
