@@ -20,15 +20,15 @@ const Sidebar = () => {
   ]
 
   return (
-    <aside className="w-64 border-r border-white/5 bg-dark-card/50 backdrop-blur-xl h-screen sticky top-0 flex flex-col">
+    <aside className="w-64 border-r border-stone-200/60 bg-white/80 backdrop-blur-xl h-screen sticky top-0 flex flex-col shadow-sm">
       <div className="p-6">
         <Link to="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center shadow-glow-primary group-hover:scale-110 transition-transform">
-            <span className="text-white font-bold text-xl">AI</span>
+          <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+            <Mic className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="font-display text-lg leading-tight">InterviewAI</p>
-            <p className="text-[10px] text-slate-400 uppercase tracking-widest">HR Portal</p>
+            <p className="font-display text-lg leading-tight text-stone-900 font-bold">InterviewAI</p>
+            <p className="text-[10px] text-primary uppercase tracking-widest font-bold">HR Portal</p>
           </div>
         </Link>
       </div>
@@ -39,37 +39,38 @@ const Sidebar = () => {
             key={item.label}
             to={item.path}
             className={cn(
-              "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
+              "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-bold",
               location.pathname === item.path 
-                ? "bg-primary/10 text-primary-light border border-primary/20" 
-                : "text-slate-400 hover:text-white hover:bg-white/5"
+                ? "bg-orange-50 text-primary border border-orange-100/50 shadow-sm" 
+                : "text-stone-500 hover:text-stone-900 hover:bg-stone-50"
             )}
           >
             <item.icon className={cn(
               "w-5 h-5 transition-colors",
-              location.pathname === item.path ? "text-primary-light" : "group-hover:text-primary-light"
+              location.pathname === item.path ? "text-primary" : "text-stone-400 group-hover:text-primary"
             )} />
-            <span className="font-medium">{item.label}</span>
+            <span>{item.label}</span>
           </Link>
         ))}
       </nav>
 
-      <div className="p-4 border-t border-white/5 space-y-2">
+      <div className="p-4 border-t border-stone-100 space-y-2">
         <button
           onClick={logout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors group"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-stone-500 hover:text-red-600 hover:bg-red-50 transition-colors group text-sm font-bold"
         >
-          <LogOut className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          <span className="font-medium">Logout</span>
+          <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+          <span>Logout</span>
         </button>
         
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent border border-primary/10 mt-4">
-          <p className="text-xs text-slate-400 mb-3">Found a bug or need help?</p>
+        <div className="p-5 rounded-2xl bg-orange-50/50 border border-orange-100/50 mt-4">
+          <p className="text-xs text-stone-500 mb-3 leading-relaxed">Found a bug or need help with AI screening?</p>
           <a 
             href="mailto:support@interviewai.com" 
-            className="text-xs font-semibold text-primary-light hover:underline"
+            className="text-xs font-bold text-primary hover:underline flex items-center gap-2"
           >
             Contact Support
+            <ArrowRight className="w-3 h-3" />
           </a>
         </div>
       </div>
