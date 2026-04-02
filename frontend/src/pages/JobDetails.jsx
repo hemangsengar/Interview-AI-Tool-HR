@@ -144,20 +144,20 @@ const JobDetails = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
         <div className="flex items-center gap-6">
           <Link to="/dashboard">
-             <Button variant="outline" size="sm" className="w-10 h-10 p-0 rounded-xl border-white/10 hover:bg-white/5">
-                <ArrowLeft className="w-5 h-5" />
+             <Button variant="outline" size="sm" className="w-10 h-10 p-0 rounded-xl border-stone-200 hover:bg-stone-50">
+                <ArrowLeft className="w-5 h-5 text-stone-600" />
              </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-display font-bold text-white mb-1">{job.title}</h1>
+            <h1 className="text-3xl font-display font-bold text-stone-900 mb-1">{job.title}</h1>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 font-bold uppercase tracking-widest pl-1">Job Code:</span>
+              <span className="text-xs text-stone-400 font-bold uppercase tracking-widest pl-1">Job Code:</span>
               <button 
                 onClick={copyJobCode}
-                className="group flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-lg px-2 py-0.5"
+                className="group flex items-center gap-2 bg-orange-50 border border-orange-100 rounded-lg px-2 py-0.5"
               >
-                <code className="text-xs font-mono text-primary-light">{job.job_code}</code>
-                <Copy className="w-3 h-3 text-primary-light/50 group-hover:text-primary-light transition-colors" />
+                <code className="text-xs font-mono text-primary font-bold">{job.job_code}</code>
+                <Copy className="w-3 h-3 text-primary/50 group-hover:text-primary transition-colors" />
               </button>
             </div>
           </div>
@@ -167,7 +167,7 @@ const JobDetails = () => {
           <Button 
             onClick={() => setShowEditJob(true)}
             variant="outline" 
-            className="border-white/10 hover:bg-white/5 h-12"
+            className="border-stone-200 hover:bg-stone-50 h-12 text-stone-600 font-bold"
           >
             <Edit3 className="mr-2 w-4 h-4" />
             Edit Opportunity
@@ -175,7 +175,7 @@ const JobDetails = () => {
           <Button 
             onClick={() => setDeleteJobConfirm(true)}
             variant="destructive" 
-            className="bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border-none h-12"
+            className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border border-red-100 h-12 font-bold"
           >
             <Trash2 className="mr-2 w-4 h-4" />
             Delete Role
@@ -186,33 +186,33 @@ const JobDetails = () => {
       {/* Main Content Info */}
       <div className="grid lg:grid-cols-3 gap-8 mb-12">
         <div className="lg:col-span-2 space-y-8">
-           <Card className="bg-white/5 border-white/5 h-full">
+           <Card className="bg-white border-stone-100 h-full shadow-sm">
              <CardContent className="p-8">
-                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                <h3 className="text-xl font-bold text-stone-900 mb-6 flex items-center gap-2">
                    <Briefcase className="w-5 h-5 text-primary" />
                    Role Overview
                 </h3>
                 <div className="space-y-6">
                    <div>
-                     <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Description</p>
-                     <p className="text-slate-300 leading-relaxed text-sm whitespace-pre-wrap">{job.jd_raw_text}</p>
+                     <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">Description</p>
+                     <p className="text-stone-600 leading-relaxed text-sm whitespace-pre-wrap font-medium">{job.jd_raw_text}</p>
                    </div>
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div>
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Requirement Stack</p>
+                        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">Requirement Stack</p>
                         <div className="flex flex-wrap gap-2">
                            {job.must_have_skills?.map((s, i) => (
-                             <span key={i} className="px-3 py-1 bg-primary/10 text-primary-light text-xs font-bold rounded-lg border border-primary/20">
+                             <span key={i} className="px-3 py-1 bg-primary/5 text-primary text-xs font-bold rounded-lg border border-primary/10">
                                 {s}
                              </span>
                            ))}
                         </div>
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Bonus Profile</p>
+                        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">Bonus Profile</p>
                         <div className="flex flex-wrap gap-2">
                            {job.good_to_have_skills?.map((s, i) => (
-                             <span key={i} className="px-3 py-1 bg-secondary/10 text-secondary-light text-xs font-bold rounded-lg border border-secondary/20">
+                             <span key={i} className="px-3 py-1 bg-secondary/5 text-secondary text-xs font-bold rounded-lg border border-secondary/10">
                                 {s}
                              </span>
                            ))}
@@ -225,28 +225,28 @@ const JobDetails = () => {
         </div>
 
         <div>
-           <Card className="bg-white/5 border-white/5">
+           <Card className="bg-white border-stone-100 shadow-sm">
              <CardContent className="p-8">
-                <h3 className="text-xl font-bold text-white mb-6">Stats Summary</h3>
+                <h3 className="text-xl font-bold text-stone-900 mb-6">Stats Summary</h3>
                 <div className="space-y-6">
-                   <div className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-white/5">
+                   <div className="flex items-center justify-between p-4 rounded-xl bg-stone-50 border border-stone-100">
                       <div className="flex items-center gap-3">
-                        <Users className="w-4 h-4 text-primary-light" />
-                        <span className="text-sm text-slate-300">Total Applicants</span>
+                        <Users className="w-4 h-4 text-primary" />
+                        <span className="text-sm text-stone-600 font-medium">Total Applicants</span>
                       </div>
-                      <span className="text-xl font-bold text-white">{candidates?.length || 0}</span>
+                      <span className="text-xl font-bold text-stone-900">{candidates?.length || 0}</span>
                    </div>
-                   <div className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-white/5">
+                   <div className="flex items-center justify-between p-4 rounded-xl bg-stone-50 border border-stone-100">
                       <div className="flex items-center gap-3">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        <span className="text-sm text-slate-300">Interviews Completed</span>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span className="text-sm text-stone-600 font-medium">Interviews Completed</span>
                       </div>
-                      <span className="text-xl font-bold text-white">
+                      <span className="text-xl font-bold text-stone-900">
                         {candidates?.filter(c => c.interview_status === 'completed').length || 0}
                       </span>
                    </div>
-                   <div className="pt-6 border-t border-white/5">
-                      <p className="text-xs text-slate-500 italic text-center">
+                   <div className="pt-6 border-t border-stone-100">
+                      <p className="text-xs text-stone-400 italic text-center font-bold uppercase tracking-widest">
                         Active since {new Date(job.created_at).toLocaleDateString()}
                       </p>
                    </div>
@@ -259,8 +259,8 @@ const JobDetails = () => {
       {/* Candidates List Section */}
       <div className="mb-12">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold text-white">Applicants Analytics</h2>
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-widest bg-white/5 px-4 py-2 rounded-lg border border-white/5">
+          <h2 className="text-2xl font-bold text-stone-900">Applicants Analytics</h2>
+          <div className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.2em] bg-stone-50 px-4 py-2 rounded-lg border border-stone-100 shadow-sm">
             Real-time Evaluation
           </div>
         </div>
@@ -268,55 +268,55 @@ const JobDetails = () => {
         {isLoadingCandidates ? (
           <Skeleton className="h-96 w-full rounded-2xl" />
         ) : candidates?.length === 0 ? (
-          <Card className="border-dashed border-white/10 bg-transparent py-20 text-center">
-             <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
-                <User className="w-8 h-8 text-slate-600" />
+          <Card className="border-dashed border-stone-200 bg-transparent py-20 text-center shadow-none">
+             <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-stone-100">
+                <User className="w-8 h-8 text-stone-300" />
              </div>
-             <p className="text-slate-400 italic">No candidates have applied to this role yet.</p>
+             <p className="text-stone-500 italic font-medium">No candidates have applied to this role yet.</p>
           </Card>
         ) : (
-          <Card className="bg-white/5 border-white/5 overflow-hidden">
+          <Card className="bg-white border-stone-100 overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b border-white/10 bg-white/5">
-                    <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest font-display">Candidate</th>
-                    <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest font-display">Experience</th>
-                    <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest font-display">Status</th>
-                    <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest font-display text-right">Actions</th>
+                  <tr className="border-b border-stone-100 bg-stone-50/50">
+                    <th className="px-8 py-5 text-xs font-bold text-stone-400 uppercase tracking-widest font-display">Candidate</th>
+                    <th className="px-8 py-5 text-xs font-bold text-stone-400 uppercase tracking-widest font-display">Experience</th>
+                    <th className="px-8 py-5 text-xs font-bold text-stone-400 uppercase tracking-widest font-display">Status</th>
+                    <th className="px-8 py-5 text-xs font-bold text-stone-400 uppercase tracking-widest font-display text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5 font-sans">
+                <tbody className="divide-y divide-stone-100 font-sans">
                   {candidates.map((candidate) => (
-                    <tr key={candidate.id} className="hover:bg-white/5 transition-colors group">
+                    <tr key={candidate.id} className="hover:bg-stone-50/50 transition-colors group">
                       <td className="px-8 py-6">
                         <div>
-                          <p className="text-white font-bold mb-1">{candidate.name}</p>
-                          <p className="text-xs text-slate-400">{candidate.email}</p>
+                          <p className="text-stone-900 font-bold mb-1">{candidate.name}</p>
+                          <p className="text-xs text-stone-500 font-medium">{candidate.email}</p>
                         </div>
                       </td>
                       <td className="px-8 py-6">
-                        <p className="text-slate-300 text-sm font-medium">{candidate.experience_years} Years</p>
-                        <p className="text-[10px] text-slate-500 uppercase">Relevant Domain</p>
+                        <p className="text-stone-700 text-sm font-bold">{candidate.experience_years} Years</p>
+                        <p className="text-[10px] text-stone-400 uppercase font-bold tracking-tight">Relevant Domain</p>
                       </td>
                       <td className="px-8 py-6">
                         <div className={cn(
-                          "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase border",
+                          "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase border shadow-sm",
                           candidate.interview_status === 'completed' 
-                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
-                            : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                            ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
+                            : "bg-amber-50 text-amber-600 border-amber-100"
                         )}>
-                          <span className={cn("w-1.5 h-1.5 rounded-full", candidate.interview_status === 'completed' ? "bg-emerald-400" : "bg-amber-400")} />
+                          <span className={cn("w-1.5 h-1.5 rounded-full", candidate.interview_status === 'completed' ? "bg-emerald-500" : "bg-amber-500")} />
                           {candidate.interview_status}
                         </div>
                       </td>
                       <td className="px-8 py-6">
-                        <div className="flex items-center justify-end gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           {candidate.interview_status === 'completed' && (
                             <Link to={`/results/${candidate.id}`}>
-                              <Button variant="outline" size="sm" className="h-9 rounded-lg border-white/10 hover:bg-white/5">
+                              <Button variant="outline" size="sm" className="h-9 rounded-lg border-stone-200 hover:bg-white text-primary font-bold">
                                 Results
-                                <ExternalLink className="ml-2 w-3 h-3 text-primary-light" />
+                                <ExternalLink className="ml-2 w-3 h-3" />
                               </Button>
                             </Link>
                           )}
@@ -324,7 +324,7 @@ const JobDetails = () => {
                             onClick={() => handleDownloadResume(candidate.id, candidate.name)}
                             variant="outline" 
                             size="sm" 
-                            className="h-9 w-9 p-0 rounded-lg border-white/10 hover:bg-white/5"
+                            className="h-9 w-9 p-0 rounded-lg border-stone-200 hover:bg-white text-stone-500 hover:text-stone-900"
                           >
                             <Download className="w-3.5 h-3.5" />
                           </Button>
@@ -332,7 +332,7 @@ const JobDetails = () => {
                             onClick={() => setDeleteConfirm(candidate.id)}
                             variant="destructive" 
                             size="sm" 
-                            className="h-9 w-9 p-0 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border-none"
+                            className="h-9 w-9 p-0 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border border-red-100"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
@@ -351,22 +351,22 @@ const JobDetails = () => {
 
       {/* Delete Candidate Confirmation */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
-          <Card className="w-full max-w-md border-white/10 animate-reveal-up overflow-hidden relative">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-stone-900/20 backdrop-blur-sm">
+          <Card className="w-full max-w-md border-stone-200 animate-reveal-up overflow-hidden relative shadow-2xl bg-white">
             <div className="absolute top-0 inset-x-0 h-1 bg-red-500" />
             <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-100">
                  <AlertCircle className="w-8 h-8 text-red-500" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Remove Candidate?</h3>
-              <p className="text-slate-400 text-sm mb-8 leading-relaxed">
+              <h3 className="text-xl font-bold text-stone-900 mb-2">Remove Candidate?</h3>
+              <p className="text-stone-500 text-sm mb-8 leading-relaxed font-medium">
                 This will permanently delete this candidate&apos;s data and interview results. This action cannot be undone.
               </p>
               <div className="flex gap-4">
                 <Button 
                   onClick={() => setDeleteConfirm(null)}
                   variant="outline" 
-                  className="flex-1 h-12 border-white/10"
+                  className="flex-1 h-12 border-stone-200 text-stone-600 font-bold"
                 >
                   Cancel
                 </Button>
@@ -385,22 +385,22 @@ const JobDetails = () => {
 
       {/* Delete Job Confirmation */}
       {deleteJobConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
-          <Card className="w-full max-w-md border-white/10 animate-reveal-up overflow-hidden relative">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-stone-900/20 backdrop-blur-sm">
+          <Card className="w-full max-w-md border-stone-200 animate-reveal-up overflow-hidden relative shadow-2xl bg-white">
             <div className="absolute top-0 inset-x-0 h-1 bg-red-500" />
             <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-100">
                  <Trash2 className="w-8 h-8 text-red-500" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Delete Job Opportunity?</h3>
-              <p className="text-slate-400 text-sm mb-8 leading-relaxed">
+              <h3 className="text-xl font-bold text-stone-900 mb-2">Delete Job Opportunity?</h3>
+              <p className="text-stone-500 text-sm mb-8 leading-relaxed font-medium">
                 Deleting this job will also remove ALL associated candidate data and interview records. Are you absolutely sure?
               </p>
               <div className="flex gap-4">
                 <Button 
                   onClick={() => setDeleteJobConfirm(false)}
                   variant="outline" 
-                  className="flex-1 h-12 border-white/10"
+                  className="flex-1 h-12 border-stone-200 text-stone-600 font-bold"
                 >
                   Cancel
                 </Button>
@@ -419,20 +419,20 @@ const JobDetails = () => {
 
       {/* Edit Job Modal */}
       {showEditJob && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-stone-900/20 backdrop-blur-sm">
           <div className="w-full max-w-2xl animate-reveal-up">
-            <Card className="border-white/10 shadow-2xl">
+            <Card className="border-stone-200 shadow-2xl bg-white">
               <CardContent className="p-8">
                 <div className="flex justify-between items-center mb-8">
-                  <h2 className="text-2xl font-bold text-white">Update Job Details</h2>
-                  <button onClick={() => setShowEditJob(false)} className="text-slate-500 hover:text-white transition-colors">
+                  <h2 className="text-2xl font-bold text-stone-900">Update Job Details</h2>
+                  <button onClick={() => setShowEditJob(false)} className="text-stone-400 hover:text-stone-900 transition-colors">
                     <Plus className="w-6 h-6 rotate-45" />
                   </button>
                 </div>
                 
                 <form onSubmit={handleEditJob} className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Job Title</label>
+                    <label className="text-xs font-bold text-stone-400 uppercase tracking-widest pl-1">Job Title</label>
                     <Input 
                       required
                       value={editFormData.title}
@@ -441,11 +441,11 @@ const JobDetails = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Job Description</label>
+                    <label className="text-xs font-bold text-stone-400 uppercase tracking-widest pl-1">Job Description</label>
                     <textarea 
                       required
                       rows={6}
-                      className="w-full bg-black/20 border border-white/5 rounded-xl p-4 text-white placeholder:text-slate-600 focus:border-primary/50 focus:ring-0 transition-all outline-none resize-none font-sans"
+                      className="w-full bg-stone-50 border border-stone-200 rounded-xl p-4 text-stone-900 placeholder:text-stone-400 focus:border-primary/50 focus:ring-0 transition-all outline-none resize-none font-sans font-medium"
                       value={editFormData.jd_raw_text}
                       onChange={(e) => setEditFormData({...editFormData, jd_raw_text: e.target.value})}
                     />
@@ -453,14 +453,14 @@ const JobDetails = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Must Have Skills</label>
+                      <label className="text-xs font-bold text-stone-400 uppercase tracking-widest pl-1">Must Have Skills</label>
                       <Input 
                         value={editFormData.must_have_skills}
                         onChange={(e) => setEditFormData({...editFormData, must_have_skills: e.target.value})}
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Bonus Skills</label>
+                      <label className="text-xs font-bold text-stone-400 uppercase tracking-widest pl-1">Bonus Skills</label>
                       <Input 
                         value={editFormData.good_to_have_skills}
                         onChange={(e) => setEditFormData({...editFormData, good_to_have_skills: e.target.value})}
@@ -472,7 +472,7 @@ const JobDetails = () => {
                     <Button 
                       type="button"
                       variant="outline" 
-                      className="flex-1 h-14 border-white/10" 
+                      className="flex-1 h-14 border-stone-200 text-stone-600 font-bold" 
                       onClick={() => setShowEditJob(false)}
                     >
                       Cancel

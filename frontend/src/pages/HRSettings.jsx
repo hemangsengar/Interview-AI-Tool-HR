@@ -45,8 +45,8 @@ const HRSettings = () => {
   return (
     <div className="max-w-6xl mx-auto px-6 py-10 animate-reveal-up">
       <div className="mb-10">
-        <h1 className="text-4xl font-display font-bold text-white mb-2">Settings</h1>
-        <p className="text-slate-400">Manage your account preferences and API integrations</p>
+        <h1 className="text-4xl font-display font-bold text-stone-900 mb-2">Settings</h1>
+        <p className="text-stone-500 font-medium">Manage your account preferences and API integrations</p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-10">
@@ -57,43 +57,43 @@ const HRSettings = () => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all font-medium",
+                "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all font-bold tracking-tight",
                 activeTab === tab.id 
-                  ? "bg-primary/20 text-primary-light border border-primary/20" 
-                  : "text-slate-400 hover:bg-white/5 hover:text-white"
+                  ? "bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]" 
+                  : "text-stone-400 hover:bg-stone-50 hover:text-stone-900"
               )}
             >
               <div className="flex items-center gap-3">
                 <tab.icon className="w-5 h-5" />
                 {tab.label}
               </div>
-              <ChevronRight className={cn("w-4 h-4 transition-transform", activeTab === tab.id ? "rotate-90" : "")} />
+              <ChevronRight className={cn("w-4 h-4 transition-transform opacity-50", activeTab === tab.id ? "rotate-90 opacity-100" : "")} />
             </button>
           ))}
         </div>
 
         {/* Content Area */}
         <div className="flex-1">
-          <Card className="border-white/5 bg-white/5 backdrop-blur-sm">
-            <CardContent className="p-8">
+          <Card className="border-stone-200 bg-white shadow-xl shadow-stone-200/40">
+            <CardContent className="p-10">
               {activeTab === 'profile' && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
-                  <div className="flex items-center gap-6">
-                    <div className="w-24 h-24 rounded-3xl bg-gradient-primary flex items-center justify-center text-3xl shadow-glow-primary">
+                  <div className="flex items-center gap-6 pb-8 border-b border-stone-100">
+                    <div className="w-24 h-24 rounded-3xl bg-gradient-primary flex items-center justify-center text-3xl shadow-lg border-4 border-white">
                       {profile.name.charAt(0)}
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-white mb-1">Your Avatar</h3>
-                      <p className="text-sm text-slate-400 mb-4">Click to upload a custom profile picture</p>
-                      <Button variant="outline" size="sm" className="border-white/10 hover:bg-white/5">
+                      <h3 className="text-xl font-bold text-stone-900 mb-1">Your Avatar</h3>
+                      <p className="text-sm text-stone-400 mb-4 font-medium">Click to upload a custom profile picture</p>
+                      <Button variant="outline" size="sm" className="border-stone-200 hover:bg-stone-50 text-stone-600 font-bold">
                         Change Photo
                       </Button>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Full Name</label>
+                      <label className="text-xs font-bold text-stone-400 uppercase tracking-widest pl-1">Full Name</label>
                       <Input 
                         value={profile.name} 
                         onChange={(e) => setProfile({...profile, name: e.target.value})}
@@ -101,7 +101,7 @@ const HRSettings = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Email Address</label>
+                      <label className="text-xs font-bold text-stone-400 uppercase tracking-widest pl-1">Email Address</label>
                       <Input 
                         value={profile.email} 
                         disabled
@@ -109,7 +109,7 @@ const HRSettings = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Company</label>
+                      <label className="text-xs font-bold text-stone-400 uppercase tracking-widest pl-1">Company</label>
                       <Input 
                         value={profile.company} 
                         onChange={(e) => setProfile({...profile, company: e.target.value})}
@@ -117,7 +117,7 @@ const HRSettings = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Role</label>
+                      <label className="text-xs font-bold text-stone-400 uppercase tracking-widest pl-1">Role</label>
                       <Input 
                         value={profile.role} 
                         onChange={(e) => setProfile({...profile, role: e.target.value})}
@@ -131,35 +131,35 @@ const HRSettings = () => {
               {activeTab === 'api' && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div>
-                    <h3 className="text-xl font-bold text-white mb-2">API Integrations</h3>
-                    <p className="text-slate-400 text-sm">Connect your applicant tracking systems or custom integrations.</p>
+                    <h3 className="text-xl font-bold text-stone-900 mb-2">API Integrations</h3>
+                    <p className="text-stone-500 text-sm font-medium">Connect your applicant tracking systems or custom integrations.</p>
                   </div>
 
-                  <div className="p-6 rounded-2xl bg-white/5 border border-white/5">
-                    <div className="flex items-center justify-between mb-4">
+                  <div className="p-8 rounded-2xl bg-stone-50 border border-stone-100 shadow-sm">
+                    <div className="flex items-center justify-between mb-6">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/20 text-primary-light">
+                        <div className="p-2 rounded-xl bg-primary text-white shadow-md">
                           <Key className="w-5 h-5" />
                         </div>
                         <div>
-                          <p className="text-white font-bold">Standard API Key</p>
-                          <p className="text-xs text-slate-500">Last used: 2 hours ago</p>
+                          <p className="text-stone-900 font-bold">Standard API Key</p>
+                          <p className="text-[10px] uppercase font-bold tracking-widest text-stone-400 mt-0.5">Last used: 2 hours ago</p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm" className="border-white/10 hover:bg-white/5">
+                      <Button variant="outline" size="sm" className="border-stone-200 hover:bg-white text-stone-600 font-bold">
                         Reveal Key
                       </Button>
                     </div>
-                    <div className="bg-black/40 rounded-xl p-4 font-mono text-xs text-slate-400 border border-white/5 flex items-center justify-between">
-                      sk_live_51P2...MjR7
-                      <ExternalLink className="w-4 h-4 cursor-pointer hover:text-primary-light" />
+                    <div className="bg-white rounded-xl p-4 font-mono text-sm text-stone-400 border border-stone-100 shadow-inner flex items-center justify-between group">
+                      <span className="opacity-60">sk_live_51P2...MjR7</span>
+                      <ExternalLink className="w-4 h-4 cursor-pointer text-stone-300 group-hover:text-primary transition-colors" />
                     </div>
                   </div>
 
-                  <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5">
-                    <p className="text-sm text-primary-light font-bold mb-1">Developer Documentation</p>
-                    <p className="text-xs text-slate-400 mb-4">Learn how to automate candidate invites and fetch results via our REST API.</p>
-                    <Button variant="premium" size="sm">
+                  <div className="p-8 rounded-2xl border border-orange-100 bg-orange-50/50 shadow-sm">
+                    <p className="text-sm text-primary font-bold mb-1">Developer Documentation</p>
+                    <p className="text-xs text-stone-500 mb-4 font-medium">Learn how to automate candidate invites and fetch results via our REST API.</p>
+                    <Button variant="premium" size="sm" className="shadow-lg">
                       Read API Docs
                     </Button>
                   </div>
@@ -168,16 +168,16 @@ const HRSettings = () => {
 
               {/* Placeholder for other tabs */}
               {['notifications', 'security'].includes(activeTab) && (
-                <div className="py-20 text-center animate-in fade-in duration-300">
-                  <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <tab.icon className="w-8 h-8 text-slate-500" />
+                <div className="py-24 text-center animate-in fade-in duration-300">
+                  <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-stone-100">
+                    <tab.icon className="w-8 h-8 text-stone-200" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">{tabs.find(t => t.id === activeTab).label} Settings</h3>
-                  <p className="text-slate-500">Additional options will be available in the next version.</p>
+                  <h3 className="text-xl font-bold text-stone-900 mb-2">{tabs.find(t => t.id === activeTab).label} Settings</h3>
+                  <p className="text-stone-500 font-medium">Additional options will be available in the next version.</p>
                 </div>
               )}
 
-              <div className="mt-12 pt-8 border-t border-white/5 flex justify-end">
+              <div className="mt-12 pt-10 border-t border-stone-100 flex justify-end">
                 <Button 
                   onClick={handleSave}
                   disabled={isSaving}
