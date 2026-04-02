@@ -269,10 +269,10 @@ const AudioVisualizer = ({
 
     // State colors for UI elements
     const stateConfig = {
-        idle: { color: 'text-slate-400', bg: 'bg-slate-500/20', label: '😊 Ready' },
-        speaking: { color: 'text-pink-400', bg: 'bg-pink-500/20', label: '🗣️ Speaking' },
-        listening: { color: 'text-red-400', bg: 'bg-red-500/20', label: '🎤 Listening' },
-        thinking: { color: 'text-purple-400', bg: 'bg-purple-500/20', label: '🤔 Processing' }
+        idle: { color: 'text-stone-600', bg: 'bg-white', border: 'border-stone-200', label: '😊 Ready' },
+        speaking: { color: 'text-pink-600', bg: 'bg-pink-50', border: 'border-pink-200', label: '🗣️ Speaking' },
+        listening: { color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200', label: '🎤 Listening' },
+        thinking: { color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200', label: '🤔 Processing' }
     }
 
     const currentState = stateConfig[state] || stateConfig.idle
@@ -301,23 +301,23 @@ const AudioVisualizer = ({
 
                 {/* State indicator badge */}
                 <div className={`absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 
-          px-4 py-1.5 rounded-full glass ${currentState.bg} ${currentState.color}
-          text-sm font-semibold transition-all duration-300`}>
+          px-4 py-1.5 rounded-full border shadow-sm ${currentState.bg} ${currentState.color} ${currentState.border}
+          text-sm font-bold transition-all duration-300`}>
                     {currentState.label}
                 </div>
             </div>
 
             {/* Speaker name */}
-            <div className="mt-4 px-6 py-2 rounded-full glass">
-                <p className="text-sm font-semibold text-white">
+            <div className="mt-4 px-6 py-2 rounded-full bg-white border border-stone-200 shadow-sm">
+                <p className="text-sm font-bold text-stone-900">
                     {speakerName} 🎯
                 </p>
             </div>
 
             {/* Subtitle/Question display */}
             {subtitle && (
-                <div className="mt-6 max-w-lg p-6 rounded-2xl glass">
-                    <p className="text-center text-white/90 text-lg leading-relaxed">
+                <div className="mt-6 max-w-lg p-6 rounded-2xl bg-white border border-stone-200 shadow-sm">
+                    <p className="text-center text-stone-800 font-medium text-lg leading-relaxed">
                         {subtitle}
                     </p>
                 </div>
@@ -338,7 +338,7 @@ const AudioVisualizer = ({
                             />
                         ))}
                     </div>
-                    <span className="text-xs text-red-400 font-medium">Listening...</span>
+                    <span className="text-xs text-red-600 font-bold tracking-tight">Listening...</span>
                 </div>
             )}
         </div>

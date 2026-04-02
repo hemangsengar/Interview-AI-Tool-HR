@@ -17,14 +17,14 @@ const InterviewSetup = ({ stream, isReady, error, onStart, requestPermissions })
   return (
     <div className="animate-reveal-up max-w-5xl mx-auto py-12 px-6">
       <div className="text-center mb-10">
-        <h1 className="text-4xl font-display font-bold text-white mb-4">Technical Readiness Check</h1>
-        <p className="text-slate-400 text-lg">Ensure your camera and microphone are working for the best experience</p>
+        <h1 className="text-4xl font-display font-bold text-stone-900 mb-4">Technical Readiness Check</h1>
+        <p className="text-stone-500 text-lg font-medium">Ensure your camera and microphone are working for the best experience</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Video Preview */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="border-white/5 overflow-hidden aspect-video bg-black/40 relative">
+          <Card className="border-stone-200 overflow-hidden aspect-video bg-stone-900 relative shadow-2xl">
             <video 
               ref={videoRef}
               autoPlay
@@ -33,26 +33,27 @@ const InterviewSetup = ({ stream, isReady, error, onStart, requestPermissions })
               className="w-full h-full object-cover mirror"
             />
             {!isReady && !error && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
-                <Camera className="w-16 h-16 text-slate-500 mb-4 animate-pulse" />
-                <p className="text-slate-300 font-medium">Waiting for camera access...</p>
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-stone-50/90 backdrop-blur-sm">
+                <Camera className="w-16 h-16 text-stone-300 mb-4 animate-pulse" />
+                <p className="text-stone-600 font-bold">Waiting for camera access...</p>
                 <Button 
                   onClick={requestPermissions}
                   variant="outline"
-                  className="mt-6"
+                  className="mt-6 border-stone-200"
                 >
                   Enable Permissions
                 </Button>
               </div>
             )}
             {error && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-950/40 backdrop-blur-md px-10 text-center">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50/95 backdrop-blur-md px-10 text-center">
                 <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
-                <h3 className="text-xl font-bold text-white mb-2">Permissions Blocked</h3>
-                <p className="text-red-200/70 mb-6">{error}</p>
+                <h3 className="text-xl font-bold text-red-900 mb-2">Permissions Blocked</h3>
+                <p className="text-red-600/70 mb-6 font-medium">{error}</p>
                 <Button 
                   onClick={requestPermissions}
                   variant="destructive"
+                  className="shadow-lg shadow-red-200"
                 >
                   Try Again
                 </Button>
@@ -67,28 +68,28 @@ const InterviewSetup = ({ stream, isReady, error, onStart, requestPermissions })
           </Card>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-white border border-stone-200 flex items-center gap-4 shadow-sm">
               <div className={cn(
                 "p-3 rounded-xl",
-                isReady ? "bg-green-500/10 text-green-400" : "bg-white/5 text-slate-500"
+                isReady ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-stone-50 text-stone-300 border border-stone-100"
               )}>
                 <Camera className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-white font-bold text-sm">Visual Check</p>
-                <p className="text-xs text-slate-400">{isReady ? "Camera active" : "Checking camera..."}</p>
+                <p className="text-stone-900 font-bold text-sm">Visual Check</p>
+                <p className="text-xs text-stone-500 font-medium">{isReady ? "Camera active" : "Checking camera..."}</p>
               </div>
             </div>
-            <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-white border border-stone-200 flex items-center gap-4 shadow-sm">
               <div className={cn(
                 "p-3 rounded-xl",
-                isReady ? "bg-green-500/10 text-green-400" : "bg-white/5 text-slate-500"
+                isReady ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-stone-50 text-stone-300 border border-stone-100"
               )}>
                 <Mic className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-white font-bold text-sm">Audio Check</p>
-                <p className="text-xs text-slate-400">{isReady ? "Microphone active" : "Checking microphone..."}</p>
+                <p className="text-stone-900 font-bold text-sm">Audio Check</p>
+                <p className="text-xs text-stone-500 font-medium">{isReady ? "Microphone active" : "Checking microphone..."}</p>
               </div>
             </div>
           </div>
@@ -96,10 +97,10 @@ const InterviewSetup = ({ stream, isReady, error, onStart, requestPermissions })
 
         {/* Right Sidebar - Instructions */}
         <div className="space-y-6">
-          <Card className="border-white/5 bg-white/5 backdrop-blur-sm">
+          <Card className="border-stone-200 bg-white shadow-xl shadow-stone-200/40">
             <CardContent className="p-8">
-              <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
-                <Info className="w-5 h-5 text-primary-light" />
+              <h3 className="text-xl font-bold text-stone-900 mb-6 flex items-center gap-3">
+                <Info className="w-5 h-5 text-primary" />
                 Interview Guidelines
               </h3>
               <ul className="space-y-6">
@@ -109,29 +110,29 @@ const InterviewSetup = ({ stream, isReady, error, onStart, requestPermissions })
                   { icon: AlertCircle, text: "The interview will take about 15-20 mins. Stay focused.", title: "Session Length" }
                 ].map((item, i) => (
                   <li key={i} className="flex gap-4">
-                    <div className="p-2 h-fit rounded-lg bg-primary/10 text-primary-light">
+                    <div className="p-2 h-fit rounded-lg bg-primary/5 text-primary border border-primary/10">
                       <item.icon className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-white font-bold text-sm">{item.title}</p>
-                      <p className="text-xs text-slate-400 leading-relaxed mt-1">{item.text}</p>
+                      <p className="text-stone-900 font-bold text-sm">{item.title}</p>
+                      <p className="text-xs text-stone-400 leading-relaxed mt-1 font-medium">{item.text}</p>
                     </div>
                   </li>
                 ))}
               </ul>
 
-              <div className="mt-10 pt-8 border-t border-white/5">
+              <div className="mt-10 pt-8 border-t border-stone-100">
                 <Button 
                   onClick={onStart}
                   disabled={!isReady}
                   size="xl"
                   variant="premium"
-                  className="w-full flex items-center gap-3 group"
+                  className="w-full flex items-center gap-3 group shadow-lg shadow-primary/20 h-16 text-lg font-bold"
                 >
-                  <Play className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                  <Play className="w-6 h-6 group-hover:scale-110 transition-transform fill-current" />
                   Start My Interview
                 </Button>
-                <p className="text-[10px] text-slate-500 text-center mt-4 uppercase tracking-widest font-bold">
+                <p className="text-[10px] text-stone-400 text-center mt-4 uppercase tracking-[0.2em] font-bold">
                   By starting, you agree to video recording for evaluation
                 </p>
               </div>

@@ -32,15 +32,15 @@ const InterviewActive = ({
       {/* Top Bar - Status & Recording */}
       <div className="flex items-center justify-between mb-6 px-4">
         <div className="flex items-center gap-4">
-          <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl flex items-center gap-3">
+          <div className="bg-white border border-stone-200 shadow-sm px-4 py-2 rounded-xl flex items-center gap-3">
             <div className={cn(
               "w-2 h-2 rounded-full",
               isRecording ? "bg-red-500 animate-pulse" : "bg-green-500"
             )} />
-            <span className="text-white text-sm font-bold uppercase tracking-wider">{status}</span>
+            <span className="text-stone-900 text-sm font-bold uppercase tracking-wider">{status}</span>
           </div>
           {recordingStatus && showRecordingAlert && (
-            <div className="animate-in fade-in slide-in-from-left duration-300 bg-red-500/20 border border-red-500/30 px-4 py-2 rounded-xl flex items-center gap-2 text-red-100 text-xs font-bold">
+            <div className="animate-in fade-in slide-in-from-left duration-300 bg-red-50 border border-red-200 px-4 py-2 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold shadow-sm">
               <Video className="w-4 h-4 animate-pulse" />
               {recordingStatus}
             </div>
@@ -51,7 +51,7 @@ const InterviewActive = ({
           variant="destructive" 
           size="sm" 
           onClick={onEnd}
-          className="border-none bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold px-6"
+          className="border border-red-100 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all font-bold px-6 shadow-sm"
         >
           End Interview
         </Button>
@@ -64,7 +64,7 @@ const InterviewActive = ({
       )}>
         {/* Left Side - Avatar & Video */}
         <div className="flex flex-col gap-6 min-h-0">
-          <Card className="flex-1 bg-black/40 border-white/5 overflow-hidden flex flex-col relative">
+          <Card className="flex-1 bg-white border-stone-200 overflow-hidden flex flex-col relative shadow-xl shadow-stone-200/40">
             <CardContent className="p-0 flex-1 flex flex-col items-center justify-center relative">
               {/* Interviewer Avatar */}
               <div className="absolute inset-x-0 top-0 h-full flex flex-col items-center justify-center">
@@ -72,12 +72,12 @@ const InterviewActive = ({
               </div>
 
               {/* Subtitles Overlay */}
-              <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+              <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-white/95 via-white/80 to-transparent backdrop-blur-sm">
                 <div className="max-w-2xl mx-auto flex gap-4">
-                  <div className="mt-1 p-2 h-fit rounded-lg bg-primary/20 text-primary-light">
+                  <div className="mt-1 p-2 h-fit rounded-lg bg-primary/10 text-primary border border-primary/20 bg-white">
                     <MessageSquare className="w-5 h-5" />
                   </div>
-                  <p className="text-xl md:text-2xl font-medium text-white/90 leading-relaxed drop-shadow-lg italic">
+                  <p className="text-xl md:text-2xl font-bold text-stone-800 leading-relaxed drop-shadow-sm italic">
                     {subtitle || "..."}
                   </p>
                 </div>
@@ -86,11 +86,11 @@ const InterviewActive = ({
           </Card>
 
           {/* Controls Bar */}
-          <Card className="bg-white/5 border-white/5 backdrop-blur-md">
+          <Card className="bg-white border-stone-200 shadow-xl shadow-stone-200/40">
             <CardContent className="p-4 flex items-center justify-between gap-6">
                <div className="flex items-center gap-4 flex-1">
                  {/* Video Preview Small */}
-                 <div className="w-32 aspect-video bg-black rounded-xl overflow-hidden border border-white/10 ring-2 ring-white/5 relative">
+                 <div className="w-32 aspect-video bg-stone-900 rounded-xl overflow-hidden border border-stone-200 ring-2 ring-stone-100 relative shadow-inner">
                    <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover mirror" />
                    <div className="absolute top-1 right-1">
                       <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
@@ -117,8 +117,8 @@ const InterviewActive = ({
                  variant="premium"
                  size="xl"
                  className={cn(
-                   "px-10 h-16 text-xl rounded-2xl group transition-all duration-500",
-                   isRecording ? "scale-105 shadow-glow-primary border-primary" : "opacity-50 grayscale scale-95"
+                   "px-10 h-16 text-xl rounded-2xl group transition-all duration-500 shadow-xl",
+                   isRecording ? "scale-105 shadow-primary/20 border-primary" : "opacity-50 grayscale scale-95"
                  )}
                >
                  <Mic className={cn("mr-3 w-6 h-6", isRecording && "animate-pulse")} />
@@ -132,20 +132,20 @@ const InterviewActive = ({
         {/* Right Side - Code Editor (Conditional) */}
         {showCodeEditor && (
           <div className="flex flex-col h-full min-h-0 animate-in slide-in-from-right duration-500">
-             <Card className="flex-1 border-white/5 bg-[#1e1e1e] overflow-hidden flex flex-col">
+             <Card className="flex-1 border-stone-200 bg-[#1e1e1e] overflow-hidden flex flex-col shadow-xl shadow-stone-200/40">
                <CardContent className="p-0 flex-1 flex flex-col h-full min-h-0">
-                  <div className="p-3 border-b border-white/5 flex items-center gap-3 bg-black/20">
-                    <Terminal className="w-4 h-4 text-primary-light" />
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Collaborative Code Editor</span>
+                  <div className="p-3 border-b border-stone-700 flex items-center gap-3 bg-black/40">
+                    <Terminal className="w-4 h-4 text-primary" />
+                    <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">Collaborative Code Editor</span>
                   </div>
                   <div className="flex-1 min-h-0">
                     <CodeEditor />
                   </div>
                </CardContent>
              </Card>
-             <div className="mt-4 p-4 rounded-xl bg-primary/10 border border-primary/20 flex items-start gap-3">
-               <AlertCircle className="w-5 h-5 text-primary-light flex-shrink-0" />
-               <p className="text-xs text-slate-400 italic">
+             <div className="mt-4 p-4 rounded-xl bg-primary/5 border border-primary/20 flex items-start gap-3 shadow-sm bg-white">
+               <AlertCircle className="w-5 h-5 text-primary flex-shrink-0" />
+               <p className="text-xs text-stone-600 italic font-medium">
                  Explain your logic as you code. The interviewer can see your keystrokes in real-time.
                </p>
              </div>

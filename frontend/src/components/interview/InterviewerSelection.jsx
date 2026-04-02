@@ -11,8 +11,8 @@ const InterviewerSelection = ({ onSelect, selectedInterviewer }) => {
       role: 'Senior Technical Lead',
       description: 'Expert in Algorithms and System Design. Focuses on deep technical understanding.',
       avatar: '👨‍💼',
-      color: 'from-blue-500/20 to-cyan-500/20',
-      border: 'hover:border-blue-500/50'
+      color: 'from-blue-50 to-cyan-50',
+      border: 'hover:border-blue-200'
     },
     {
       id: 'aarushi',
@@ -20,16 +20,16 @@ const InterviewerSelection = ({ onSelect, selectedInterviewer }) => {
       role: 'Product & Culture Specialist',
       description: 'Expert in Frontend, UX and Behavioral traits. Values creativity and problem-solving.',
       avatar: '👩‍💼',
-      color: 'from-purple-500/20 to-pink-500/20',
-      border: 'hover:border-purple-500/50'
+      color: 'from-purple-50 to-pink-50',
+      border: 'hover:border-purple-200'
     }
   ]
 
   return (
     <div className="animate-reveal-up max-w-4xl mx-auto py-12">
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-display font-bold text-white mb-4">Choose Your Interviewer</h1>
-        <p className="text-slate-400 text-lg">Select the AI persona that will conduct your technical assessment</p>
+        <h1 className="text-4xl font-display font-bold text-stone-900 mb-4">Choose Your Interviewer</h1>
+        <p className="text-stone-500 text-lg font-medium">Select the AI persona that will conduct your technical assessment</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -38,9 +38,9 @@ const InterviewerSelection = ({ onSelect, selectedInterviewer }) => {
             key={interviewer.id}
             onClick={() => onSelect(interviewer.id)}
             className={cn(
-              "relative cursor-pointer transition-all duration-300 border-white/5 overflow-hidden group",
+              "relative cursor-pointer transition-all duration-500 border-stone-200 overflow-hidden group bg-white shadow-sm",
               interviewer.border,
-              selectedInterviewer === interviewer.id && "border-primary/50 ring-2 ring-primary/20 scale-[1.02]"
+              selectedInterviewer === interviewer.id && "border-primary ring-4 ring-primary/10 scale-[1.03] shadow-xl shadow-primary/5"
             )}
           >
             <CardContent className="p-0">
@@ -52,21 +52,21 @@ const InterviewerSelection = ({ onSelect, selectedInterviewer }) => {
               <div className="p-8">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="text-2xl font-bold text-white">{interviewer.name}</h3>
-                    <p className="text-primary-light font-medium">{interviewer.role}</p>
+                    <h3 className="text-2xl font-bold text-stone-900">{interviewer.name}</h3>
+                    <p className="text-primary font-bold tracking-tight">{interviewer.role}</p>
                   </div>
                   {selectedInterviewer === interviewer.id && (
-                    <div className="bg-primary/20 text-primary-light p-2 rounded-full">
+                    <div className="bg-primary text-white p-2 rounded-full shadow-lg">
                       <User className="w-5 h-5" />
                     </div>
                   )}
                 </div>
-                <p className="text-slate-400 leading-relaxed mb-6">
+                <p className="text-stone-500 leading-relaxed mb-6 font-medium">
                   {interviewer.description}
                 </p>
                 <Button 
                   variant={selectedInterviewer === interviewer.id ? "premium" : "outline"}
-                  className="w-full"
+                  className={cn("w-full h-12 shadow-sm font-bold", selectedInterviewer === interviewer.id ? "shadow-primary/20" : "border-stone-200")}
                 >
                   {selectedInterviewer === interviewer.id ? "Selected" : "Select Interviewer"}
                 </Button>

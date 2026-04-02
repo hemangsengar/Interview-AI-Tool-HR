@@ -228,8 +228,8 @@ const InterviewRoom = () => {
 
   if (showInterviewerSelection) {
     return (
-      <div className="min-h-screen bg-dark relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-mesh" />
+      <div className="min-h-screen bg-stone-50 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-mesh opacity-40" />
         <InterviewerSelection 
           selectedInterviewer={selectedInterviewer}
           onSelect={handleInterviewerSelect}
@@ -240,8 +240,8 @@ const InterviewRoom = () => {
 
   if (!interviewStarted) {
     return (
-      <div className="min-h-screen bg-dark relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-mesh" />
+      <div className="min-h-screen bg-stone-50 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-mesh opacity-40" />
         <InterviewSetup 
           stream={stream}
           isReady={isReady}
@@ -254,8 +254,8 @@ const InterviewRoom = () => {
   }
 
   return (
-    <div className="min-h-screen bg-dark relative overflow-hidden p-8 flex flex-col items-center justify-center">
-      <div className="absolute inset-0 bg-gradient-mesh opacity-30" />
+    <div className="min-h-screen bg-stone-50 relative overflow-hidden p-8 flex flex-col items-center justify-center">
+      <div className="absolute inset-0 bg-gradient-mesh opacity-20" />
       <InterviewActive 
         stream={stream}
         avatarState={avatarState}
