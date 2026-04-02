@@ -1,176 +1,143 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Link } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { jobService } from '../api/services'
+import { Button } from '../components/ui/Button'
+import { Input } from '../components/ui/Input'
+import { Card, CardContent } from '../components/ui/Card'
+import { toast } from 'sonner'
+import { Mic, ArrowRight, ArrowLeft, Info, Sparkles } from 'lucide-react'
 
 const CandidateEntry = () => {
   const navigate = useNavigate()
   const [jobCode, setJobCode] = useState('')
-  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setError('')
     setLoading(true)
 
     try {
       const response = await jobService.getByCode(jobCode.toUpperCase())
+      toast.success('Job found!', {
+        description: `Preparing application for ${response.data.title}`
+      })
       navigate(`/apply/${response.data.id}`)
     } catch (err) {
-      setError(err.response?.data?.detail || 'Job not found. Please check the code and try again.')
+      const errorMsg = err.response?.data?.detail || 'Job not found. Please check the code.'
+      toast.error(errorMsg)
     } finally {
       setLoading(false)
     }
   }
 
+  const demoJobs = [
+    { code: 'PY2024', title: 'Senior Python Developer' },
+    { code: 'JS2024', title: 'Full Stack JS Developer' },
+    { code: 'DS2024', title: 'Data Scientist - ML' },
+  ]
+
   return (
-    <div className="min-h-screen bg-dark relative overflow-hidden flex items-center justify-center p-6">
-      {/* Animated mesh background */}
-      <div className="absolute inset-0 bg-gradient-mesh" />
-
-      {/* Floating orbs */}
-      <div className="absolute top-1/4 left-10 w-80 h-80 bg-cyan/20 rounded-full blur-3xl animate-float" />
-      <div className="absolute bottom-1/4 right-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '3s' }} />
-
-      {/* Entry Card */}
-      <div className="relative w-full max-w-md">
-        {/* Glow behind card */}
-        <div className="absolute -inset-1 bg-gradient-accent rounded-3xl blur-lg opacity-30" />
-
-        <div className="relative glass rounded-3xl p-8">
+    <div className="animate-reveal-up max-w-lg mx-auto">
+      <Card className="border-white/10 overflow-hidden">
+        <CardContent className="pt-8">
           {/* Header */}
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-gradient-accent rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-glow-accent">
-              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-              </svg>
+          <div className="text-center mb-10">
+            <div className="w-20 h-20 bg-gradient-accent rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-glow-accent hover:scale-110 transition-transform">
+              <Mic className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Join Interview</h1>
-            <p className="text-slate-400">Enter your job code to begin</p>
+            <h1 className="text-4xl font-display font-bold text-white mb-3">Join Interview</h1>
+            <p className="text-slate-400 text-lg">Enter your unique job code to begin</p>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
-              {error}
-            </div>
-          )}
-
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-3 text-center">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="space-y-4">
+              <label className="block text-sm font-bold text-slate-300 text-center uppercase tracking-widest">
                 Job Code
               </label>
-              <input
+              <Input
                 type="text"
                 value={jobCode}
                 onChange={(e) => setJobCode(e.target.value.toUpperCase())}
-                className="input-field text-center text-2xl font-mono tracking-widest uppercase"
+                className="text-center text-3xl font-mono tracking-[0.5em] uppercase h-20 border-2 focus:ring-accent/50 focus:border-accent/50"
                 placeholder="XXXXXX"
                 maxLength={6}
                 required
               />
-              <p className="text-xs text-slate-500 text-center mt-2">
-                Enter the 6-character code provided by HR
+              <p className="text-xs text-slate-500 text-center italic">
+                The 6-character code provided in your invitation
               </p>
             </div>
 
-            <button
+            <Button
               type="submit"
               disabled={loading || jobCode.length < 6}
-              className="w-full bg-gradient-accent py-4 rounded-2xl font-semibold text-lg text-white
-                shadow-glow-accent hover:shadow-[0_0_50px_rgba(245,158,11,0.5)] 
-                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              variant="secondary"
+              size="xl"
+              className="w-full py-8 text-xl bg-gradient-accent border-none shadow-glow-accent"
             >
               {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
+                <span className="flex items-center justify-center gap-3">
+                  <div className="animate-spin w-6 h-6 border-2 border-white/30 border-t-white rounded-full" />
                   Finding Job...
                 </span>
               ) : (
-                <span className="flex items-center justify-center gap-2">
-                  <span>Continue</span>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
+                <span className="flex items-center gap-3">
+                  Check Job Code
+                  <ArrowRight className="w-6 h-6" />
                 </span>
               )}
-            </button>
+            </Button>
           </form>
 
           {/* Instructions */}
-          <div className="mt-8 p-4 rounded-xl bg-dark-card/50 border border-slate-700">
-            <h3 className="text-sm font-semibold text-slate-300 mb-3">📋 Before you begin:</h3>
-            <ul className="text-xs text-slate-400 space-y-2">
-              <li className="flex items-start gap-2">
-                <span className="text-green-400">✓</span>
-                Ensure you&apos;re in a quiet environment
+          <div className="mt-10 p-5 rounded-2xl bg-white/5 border border-white/10">
+            <h3 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
+              <Info className="w-4 h-4 text-accent" />
+              Before you begin:
+            </h3>
+            <ul className="grid grid-cols-1 gap-3">
+              <li className="flex items-center gap-3 text-xs text-slate-400">
+                <div className="w-1.5 h-1.5 rounded-full bg-accent" />
+                Find a quiet, well-lit environment
               </li>
-              <li className="flex items-start gap-2">
-                <span className="text-green-400">✓</span>
-                Have your microphone ready
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-green-400">✓</span>
-                Keep your resume details handy
+              <li className="flex items-center gap-3 text-xs text-slate-400">
+                <div className="w-1.5 h-1.5 rounded-full bg-accent" />
+                Ensure your microphone and camera work
               </li>
             </ul>
           </div>
 
           {/* Demo Job Codes */}
-          <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-cyan/10 to-primary/10 border border-cyan/20">
-            <h3 className="text-sm font-semibold text-cyan mb-3">🎯 Demo Job Codes (Try Now!)</h3>
+          <div className="mt-6 p-5 rounded-2xl bg-accent/5 border border-accent/20 border-dashed">
+            <h3 className="text-xs font-bold text-accent mb-4 flex items-center gap-2 uppercase tracking-wider">
+              <Sparkles className="w-3 h-3" />
+              Demo Job Codes
+            </h3>
             <div className="grid grid-cols-1 gap-2">
-              <button
-                type="button"
-                onClick={() => setJobCode('PY2024')}
-                className="flex items-center justify-between p-2 rounded-lg bg-dark/50 hover:bg-dark/80 border border-slate-700 hover:border-cyan/50 transition-all group"
-              >
-                <div className="text-left">
-                  <span className="text-xs text-slate-400">Senior Python Developer</span>
-                </div>
-                <span className="font-mono text-sm text-cyan group-hover:text-white transition-colors">PY2024</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setJobCode('JS2024')}
-                className="flex items-center justify-between p-2 rounded-lg bg-dark/50 hover:bg-dark/80 border border-slate-700 hover:border-cyan/50 transition-all group"
-              >
-                <div className="text-left">
-                  <span className="text-xs text-slate-400">Full Stack JS Developer</span>
-                </div>
-                <span className="font-mono text-sm text-cyan group-hover:text-white transition-colors">JS2024</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setJobCode('DS2024')}
-                className="flex items-center justify-between p-2 rounded-lg bg-dark/50 hover:bg-dark/80 border border-slate-700 hover:border-cyan/50 transition-all group"
-              >
-                <div className="text-left">
-                  <span className="text-xs text-slate-400">Data Scientist - ML</span>
-                </div>
-                <span className="font-mono text-sm text-cyan group-hover:text-white transition-colors">DS2024</span>
-              </button>
+              {demoJobs.map((job) => (
+                <button
+                  key={job.code}
+                  type="button"
+                  onClick={() => setJobCode(job.code)}
+                  className="flex items-center justify-between p-3 rounded-xl bg-dark/40 hover:bg-dark/80 border border-white/5 hover:border-accent/40 transition-all group"
+                >
+                  <span className="text-xs text-slate-400 group-hover:text-slate-300 truncate mr-2">{job.title}</span>
+                  <span className="font-mono text-sm font-bold text-accent group-hover:text-white">{job.code}</span>
+                </button>
+              ))}
             </div>
-            <p className="text-xs text-slate-500 mt-2 text-center">
-              Click any code above to auto-fill
-            </p>
           </div>
 
-          {/* Back to home */}
-          <div className="mt-6 text-center">
-            <Link to="/" className="text-sm text-slate-500 hover:text-slate-300 transition-colors">
-              ← Back to Home
+          {/* Back link */}
+          <div className="mt-8 text-center pt-4">
+            <Link to="/" className="text-sm text-slate-500 hover:text-slate-300 transition-colors flex items-center justify-center gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Home
             </Link>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
