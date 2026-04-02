@@ -11,8 +11,6 @@ import {
   Globe, 
   ArrowRight, 
   Play,
-  Github,
-  Linkedin,
   Cpu,
   MessagesSquare,
   Trophy
