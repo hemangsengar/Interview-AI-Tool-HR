@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
 import { Card, CardContent } from '../components/ui/Card'
+import { API_BASE_URL } from '../lib/apiBaseUrl'
+import { cn } from '../lib/utils'
 import { 
   Mic, 
   Users, 
@@ -18,9 +20,12 @@ import {
 
 // Warm up the backend on landing page load (handles Render cold start)
 const warmUpBackend = async () => {
-  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+  if (!API_BASE_URL) {
+    console.warn('[WARMUP] VITE_API_BASE_URL is not configured for production')
+    return
+  }
   try {
-    await fetch(`${apiUrl}/health`, { mode: 'cors' })
+    await fetch(`${API_BASE_URL}/health`, { mode: 'cors' })
     console.log('[WARMUP] Backend is ready!')
   } catch (e) {
     console.log('[WARMUP] Backend warming up...')

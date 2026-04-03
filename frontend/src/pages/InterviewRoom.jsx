@@ -4,6 +4,7 @@ import { useUserMedia } from '../hooks/useUserMedia'
 import { useInterviewRecorder } from '../hooks/useInterviewRecorder'
 import { useInterviewSession } from '../hooks/useInterviewSession'
 import { interviewService } from '../api/services'
+import { API_BASE_URL } from '../lib/apiBaseUrl'
 import { toast } from 'sonner'
 
 // Sub-components
@@ -94,8 +95,11 @@ const InterviewRoom = () => {
     setAvatarState('speaking')
     setStatus('Interviewer speaking...')
     
-    const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '')
-    const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
+    const fullUrl = url.startsWith('http')
+      ? url
+      : API_BASE_URL
+        ? `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`
+        : url
     
     const audio = new Audio(fullUrl)
     audio.onended = () => startUserResponse()
