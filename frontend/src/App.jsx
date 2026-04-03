@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import MainLayout from './components/layout/MainLayout'
 import Landing from './pages/Landing'
@@ -26,7 +26,7 @@ const PublicLayout = ({ children }) => {
 
 function App() {
   return (
-    <Router>
+    <>
       <Toaster position="top-right" theme="dark" richColors closeButton />
       <Routes>
         {/* Public Routes */}
@@ -50,7 +50,7 @@ function App() {
         <Route path="/404" element={<NotFound />} />
         <Route path="*" element={<Navigate to="/404" replace />} />
       </Routes>
-    </Router>
+    </>
   )
 }
 
