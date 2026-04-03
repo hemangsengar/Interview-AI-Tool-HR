@@ -36,7 +36,7 @@ function App() {
         
         {/* Candidate Routes */}
         <Route path="/candidate" element={<PublicLayout><CandidateEntry /></PublicLayout>} />
-        <Route path="/candidate/apply/:jobCode" element={<PublicLayout><CandidateApply /></PublicLayout>} />
+        <Route path="/candidate/apply/:jobId" element={<PublicLayout><CandidateApply /></PublicLayout>} />
         <Route path="/interview/:sessionId" element={<PublicLayout><InterviewRoom /></PublicLayout>} />
         <Route path="/interview/success/:sessionId" element={<PublicLayout><InterviewSuccess /></PublicLayout>} />
         

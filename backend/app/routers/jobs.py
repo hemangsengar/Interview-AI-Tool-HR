@@ -159,8 +159,10 @@ async def list_candidates(
     result = []
     for candidate in candidates:
         candidate_response = CandidateResponse.model_validate(candidate)
+        candidate_response.experience_years = (candidate.resume_parsed_json or {}).get("experience_years")
         if candidate.interview_session:
             candidate_response.interview_session_id = candidate.interview_session.id
+            candidate_response.interview_status = candidate.interview_session.status
             candidate_response.final_score = candidate.interview_session.final_score
             candidate_response.final_recommendation = candidate.interview_session.final_recommendation
         result.append(candidate_response)

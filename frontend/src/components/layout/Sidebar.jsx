@@ -1,11 +1,10 @@
 import { Link, useLocation } from 'react-router-dom'
 import { 
   LayoutDashboard, 
-  Briefcase, 
+  Mic,
   Settings, 
-  Users, 
   LogOut, 
-  PlusCircle 
+  ArrowRight
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { cn } from '../../lib/utils'

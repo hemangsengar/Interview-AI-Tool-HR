@@ -39,7 +39,7 @@ const HRSignup = () => {
       toast.success('Account created successfully!', {
         description: 'Welcome to InterviewAI'
       })
-      navigate('/hr/jobs')
+      navigate('/dashboard')
     } catch (err) {
       const errorMsg = err.response?.data?.detail || 'Signup failed. Please try again.'
       toast.error(errorMsg)

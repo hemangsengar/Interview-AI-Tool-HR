@@ -22,7 +22,7 @@ const HRLogin = () => {
       const response = await authService.login(formData)
       setAuth(response.data.access_token, response.data.user)
       toast.success('Welcome back!')
-      navigate('/hr/jobs')
+      navigate('/dashboard')
     } catch (err) {
       const errorMsg = err.response?.data?.detail || 'Login failed. Please try again.'
       toast.error(errorMsg)

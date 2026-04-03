@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button'
 import { Card, CardContent } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Skeleton } from '../components/ui/Skeleton'
+import { cn } from '../lib/utils'
 import { 
   ArrowLeft, 
   Download, 
@@ -138,6 +139,11 @@ const JobDetails = () => {
 
   if (!job) return null
 
+  const getInterviewStatus = (candidate) => {
+    if (candidate?.interview_status) return candidate.interview_status
+    return candidate?.final_score !== null && candidate?.final_score !== undefined ? 'completed' : 'pending'
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-10 animate-reveal-up">
       {/* Back & Actions */}
@@ -242,7 +248,7 @@ const JobDetails = () => {
                         <span className="text-sm text-stone-600 font-medium">Interviews Completed</span>
                       </div>
                       <span className="text-xl font-bold text-stone-900">
-                        {candidates?.filter(c => c.interview_status === 'completed').length || 0}
+                        {candidates?.filter(candidate => getInterviewStatus(candidate) === 'completed').length || 0}
                       </span>
                    </div>
                    <div className="pt-6 border-t border-stone-100">
@@ -296,24 +302,24 @@ const JobDetails = () => {
                         </div>
                       </td>
                       <td className="px-8 py-6">
-                        <p className="text-stone-700 text-sm font-bold">{candidate.experience_years} Years</p>
+                          <p className="text-stone-700 text-sm font-bold">{candidate.experience_years ?? 0} Years</p>
                         <p className="text-[10px] text-stone-400 uppercase font-bold tracking-tight">Relevant Domain</p>
                       </td>
                       <td className="px-8 py-6">
                         <div className={cn(
                           "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase border shadow-sm",
-                          candidate.interview_status === 'completed' 
+                          getInterviewStatus(candidate) === 'completed' 
                             ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
                             : "bg-amber-50 text-amber-600 border-amber-100"
                         )}>
-                          <span className={cn("w-1.5 h-1.5 rounded-full", candidate.interview_status === 'completed' ? "bg-emerald-500" : "bg-amber-500")} />
-                          {candidate.interview_status}
+                          <span className={cn("w-1.5 h-1.5 rounded-full", getInterviewStatus(candidate) === 'completed' ? "bg-emerald-500" : "bg-amber-500")} />
+                          {getInterviewStatus(candidate)}
                         </div>
                       </td>
                       <td className="px-8 py-6">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {candidate.interview_status === 'completed' && (
-                            <Link to={`/results/${candidate.id}`}>
+                          {getInterviewStatus(candidate) === 'completed' && candidate.interview_session_id && (
+                            <Link to={`/results/${candidate.interview_session_id}`}>
                               <Button variant="outline" size="sm" className="h-9 rounded-lg border-stone-200 hover:bg-white text-primary font-bold">
                                 Results
                                 <ExternalLink className="ml-2 w-3 h-3" />

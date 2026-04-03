@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import User
 from ..schemas import UserSignup, UserLogin, Token, UserResponse
-from ..auth import hash_password, verify_password, create_access_token
+from ..auth import hash_password, verify_password, create_access_token, get_current_user
 from ..middleware.rate_limiter import rate_limiter
 
 router = APIRouter()
@@ -134,6 +134,6 @@ async def login(request: Request, credentials: UserLogin, db: Session = Depends(
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user_info(current_user: User = Depends(get_db)):
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current user information."""
     return current_user

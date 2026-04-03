@@ -1027,6 +1027,8 @@ async def get_interview_results(
     
     return InterviewResults(
         session_id=session.id,
+        candidate_id=candidate.id,
+        job_id=job.id,
         candidate_name=candidate.name,
         candidate_email=candidate.email,
         job_title=job.title,

@@ -21,7 +21,7 @@ const CandidateEntry = () => {
       toast.success('Job found!', {
         description: `Preparing application for ${response.data.title}`
       })
-      navigate(`/apply/${response.data.id}`)
+      navigate(`/candidate/apply/${response.data.id}`)
     } catch (err) {
       const errorMsg = err.response?.data?.detail || 'Job not found. Please check the code.'
       toast.error(errorMsg)

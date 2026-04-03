@@ -90,6 +90,8 @@ class CandidateResponse(BaseModel):
     resume_file_path: Optional[str] = None
     created_at: datetime
     interview_session_id: Optional[int] = None
+    interview_status: Optional[InterviewStatusEnum] = None
+    experience_years: Optional[int] = None
     final_score: Optional[float] = None
     final_recommendation: Optional[RecommendationEnum] = None
     
@@ -140,6 +142,8 @@ class QuestionDetail(BaseModel):
 
 class InterviewResults(BaseModel):
     session_id: int
+    candidate_id: int
+    job_id: int
     candidate_name: str
     candidate_email: str
     job_title: str

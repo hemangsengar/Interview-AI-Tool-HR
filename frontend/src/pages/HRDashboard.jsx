@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button'
 import { Card, CardContent } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Skeleton } from '../components/ui/Skeleton'
+import { cn } from '../lib/utils'
 import { 
   Plus, 
   Briefcase, 
@@ -109,7 +110,7 @@ const HRDashboard = () => {
             <div>
               <p className="text-xs font-bold text-stone-400 uppercase tracking-widest leading-none mb-1">Total Candidates</p>
               <p className="text-2xl font-bold text-stone-900">
-                {jobs?.reduce((acc, job) => acc + (job.candidates_count || 0), 0) || 0}
+                {jobs?.reduce((acc, job) => acc + (job.candidate_count || 0), 0) || 0}
               </p>
             </div>
           </CardContent>
@@ -197,7 +198,7 @@ const HRDashboard = () => {
                     <div className="flex items-center gap-4">
                        <div className="text-center">
                          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-tighter">Candidates</p>
-                         <p className="text-lg font-bold text-stone-900">{job.candidates_count || 0}</p>
+                         <p className="text-lg font-bold text-stone-900">{job.candidate_count || 0}</p>
                        </div>
                     </div>
                     <Link to={`/job/${job.id}`}>
