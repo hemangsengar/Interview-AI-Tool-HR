@@ -1,8 +1,6 @@
-import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
 import { Card, CardContent } from '../components/ui/Card'
-import { API_BASE_URL } from '../lib/apiBaseUrl'
 import { cn } from '../lib/utils'
 import { 
   Mic, 
@@ -18,25 +16,7 @@ import {
   Trophy
 } from 'lucide-react'
 
-// Warm up the backend on landing page load (handles Render cold start)
-const warmUpBackend = async () => {
-  if (!API_BASE_URL) {
-    console.warn('[WARMUP] VITE_API_BASE_URL is not configured for production')
-    return
-  }
-  try {
-    await fetch(`${API_BASE_URL}/health`, { mode: 'cors' })
-    console.log('[WARMUP] Backend is ready!')
-  } catch (e) {
-    console.log('[WARMUP] Backend warming up...')
-  }
-}
-
 const Landing = () => {
-  useEffect(() => {
-    warmUpBackend()
-  }, [])
-
   const keyStats = [
     { value: '3x', label: 'Faster Screening', icon: Zap },
     { value: '24/7', label: 'Availability', icon: Globe },

@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import MainLayout from './components/layout/MainLayout'
+import BackendWarmupArcade from './components/BackendWarmupArcade'
 import Landing from './pages/Landing'
 import HRLogin from './pages/HRLogin'
 import HRSignup from './pages/HRSignup'
@@ -28,6 +29,7 @@ function App() {
   return (
     <>
       <Toaster position="top-right" theme="dark" richColors closeButton />
+      <BackendWarmupArcade />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Landing />} />

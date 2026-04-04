@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 import { API_BASE_URL } from '../lib/apiBaseUrl'
+import { reportBackendWarmupError } from '../store/backendWarmupStore'
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL || undefined,
@@ -30,6 +31,8 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    reportBackendWarmupError(error)
+
     if (error.response?.status === 401) {
       // Only logout if not on login/signup pages
       const currentPath = window.location.hash || window.location.pathname
